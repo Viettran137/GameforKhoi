@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game của Khôi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --plum: #2B1B4D;
+      --plum-deep: #1B0F35;
+      --cream: #FFF4E6;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(ellipse at 50% 0%, #43286F 0%, var(--plum) 45%, var(--plum-deep) 100%);
+      font-family: "Nunito", system-ui, sans-serif;
+      color: var(--cream);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px 60px;
+      gap: 38px;
+    }
+
+    .title {
+      font-family: "Baloo 2", system-ui, sans-serif;
+      font-weight: 800;
+      font-size: clamp(38px, 9vw, 76px);
+      line-height: 1;
+      text-align: center;
+      letter-spacing: -1px;
+      text-shadow: 0 5px 0 rgba(0, 0, 0, .28);
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 17px;
+      color: #C9BBE6;
+      margin-top: 12px;
+    }
+
+    .shelf {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 26px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .btn {
+      display: block;
+      text-decoration: none;
+      border-radius: 24px;
+      padding: 38px 22px 34px;
+      text-align: center;
+      color: var(--plum-deep);
+      font-family: "Baloo 2", system-ui, sans-serif;
+      font-weight: 800;
+      font-size: 26px;
+      line-height: 1.15;
+      background: var(--c);
+      box-shadow: 0 9px 0 var(--cd);
+      transition: transform .09s ease, box-shadow .09s ease;
+    }
+
+    .btn .emoji {
+      display: block;
+      font-size: 54px;
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+
+    .btn:active {
+      transform: translateY(9px);
+      box-shadow: 0 0 0 var(--cd);
+    }
+
+    .btn:focus-visible {
+      outline: 4px solid var(--cream);
+      outline-offset: 5px;
+    }
+
+    .status {
+      color: #9C8BC0;
+      font-size: 16px;
+      text-align: center;
+    }
+
+    footer {
+      color: #9C8BC0;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    @media (max-width: 700px) {
+      .shelf { grid-template-columns: 1fr; gap: 20px; max-width: 380px }
+      .btn { padding: 26px 20px 24px; font-size: 24px }
+      .btn .emoji { font-size: 44px; margin-bottom: 10px }
+      .btn:active { transform: translateY(7px) }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .btn { transition: none }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div>
+    <h1 class="title">Game của Khôi</h1>
+    <p class="subtitle">Chọn một game để bắt đầu chơi</p>
+  </div>
+
+  <nav class="shelf" id="shelf"></nav>
+  <p class="status" id="status">Đang tìm game...</p>
+
+  <footer>Chúc Khôi chơi vui nhé!</footer>
+
+  <script>
+    // ── Chỉnh ở đây nếu cần ────────────────────────────────
+    const MAX_GAME = 99;      // dò tối đa tới Game99.html
+    const DUNG_SAU = 3;       // hụt liên tiếp bao nhiêu file thì dừng dò
+    const MAU = [
+      ['#FF6B4A', '#C64328'],  // cam san hô
+      ['#FFC93C', '#C89417'],  // vàng nắng
+      ['#3DD9A4', '#1E9E73'],  // xanh bạc hà
+      ['#6BA8FF', '#3670C4'],  // xanh biển
+      ['#FF8FC7', '#C55A92'],  // hồng
+      ['#B98CFF', '#7E51C9'],  // tím
+    ];
+    const HINH = ['🚀', '🎯', '🧩', '🏎️', '⚽', '🐉', '🎲', '🍄', '⭐'];
+    // ───────────────────────────────────────────────────────
+
+    const shelf = document.getElementById('shelf');
+    const status = document.getElementById('status');
+
+    function tenFile(n) {
+      return 'Game' + String(n).padStart(2, '0') + '.html';
+    }
+
+    async function docTen(file, n) {
+      try {
+        const res = await fetch(file, { cache: 'no-cache' });
+        if (!res.ok) return null;
+        const html = await res.text();
+        const khop = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        const ten = khop ? khop[1].trim() : '';
+        return ten || ('Game ' + n);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function themNut(file, ten, i) {
+      const cap = MAU[i % MAU.length];
+      const a = document.createElement('a');
+      a.className = 'btn';
+      a.href = file;
+      a.style.setProperty('--c', cap[0]);
+      a.style.setProperty('--cd', cap[1]);
+      a.innerHTML = '<span class="emoji">' + HINH[i % HINH.length] + '</span>';
+      a.appendChild(document.createTextNode(ten));
+      shelf.appendChild(a);
+    }
+
+    (async function timGame() {
+      let hut = 0, thay = 0;
+      for (let n = 1; n <= MAX_GAME && hut < DUNG_SAU; n++) {
+        const file = tenFile(n);
+        const ten = await docTen(file, n);
+        if (ten === null) { hut++; continue; }
+        hut = 0;
+        themNut(file, ten, thay);
+        thay++;
+        status.textContent = '';
+      }
+      if (thay === 0) {
+        status.textContent = 'Chưa tìm thấy game nào. Kiểm tra lại tên file: Game01.html, Game02.html...';
+      }
+    })();
+  </script>
+
+</body>
+
+</html>
