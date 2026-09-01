@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Toán · Tiếng Việt · Tiếng Anh · Công nghệ</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   BỐN MÔN HỌC — Game 03
+   Toán · Tiếng Việt · Tiếng Anh · Công nghệ
+   20 câu mỗi bài · 4 đáp án · có tính điểm và làm lại câu sai theo lượt.
+
+   Cùng nền với Game 01 và Game 02 — giữ nguyên nguyên tắc cho bé tự kỷ 9–10 tuổi:
+   • Một file duy nhất, chạy offline, hình vẽ SVG nằm trong file
+   • Màu dịu, không nhấp nháy · KHÔNG tính giờ, không đếm ngược
+   • Hai nút tắt RIÊNG BIỆT: 🎵 nhạc nền · 🔔 tiếng khen + giọng đọc
+   • Bố cục cố định · luôn biết còn bao nhiêu câu nữa
+   • KHÔNG tự nhảy câu — bé tự bấm "Câu tiếp theo" nên không bị hối
+   ═══════════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#FBF6EE; --card:#FFFFFF; --ink:#2E3D50; --ink2:#5B6B80; --ink3:#8A99AC;
+  --line:#E6DFD3; --accent:#4B7BA8; --accent-soft:#E8F0F7;
+  --ok:#5B9E7E; --ok-soft:#E6F2EC; --hint:#C98A3C; --hint-soft:#FBF0DF;
+  --warn:#CE5540; --warn-soft:#FBEBE8;
+  --radius:18px; --shadow:0 2px 10px rgba(46,61,80,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  background:var(--bg); color:var(--ink);
+  font-size:19px; line-height:1.75; letter-spacing:.2px;
+  -webkit-font-smoothing:antialiased; padding:16px;
+  display:flex; flex-direction:column; align-items:center;
+}
+.wrap{width:100%; max-width:1000px; margin:auto}
+button{font-family:inherit; font-size:inherit; cursor:pointer; border:none; background:none; color:inherit}
+button:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
+.hide{display:none !important}
+
+.topbar{display:flex; align-items:center; gap:10px; margin-bottom:18px; flex-wrap:wrap}
+.topbar h1{font-size:20px; font-weight:800; letter-spacing:.3px; flex:1; min-width:180px}
+.iconbtn{
+  display:flex; align-items:center; gap:8px; background:var(--card); border:2px solid var(--line);
+  border-radius:999px; padding:8px 16px; font-size:15px; font-weight:700; color:var(--ink2); box-shadow:var(--shadow);
+}
+.iconbtn:hover{border-color:var(--accent); color:var(--accent)}
+.card{background:var(--card); border:2px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow)}
+
+/* ── Màn hình bắt đầu ── */
+.start{text-align:center; padding:40px 28px}
+.start h2{font-size:34px; font-weight:800; margin:16px 0 10px; letter-spacing:.3px}
+.start p{color:var(--ink2); max-width:560px; margin:0 auto 10px}
+.hero{max-width:210px; margin:0 auto}
+.hero svg{width:100%; height:auto; display:block}
+.modes{display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-top:26px}
+.bigbtn{
+  background:var(--accent); color:#fff; font-size:23px; font-weight:800;
+  padding:19px 44px; border-radius:999px; box-shadow:0 4px 0 #3B6389;
+}
+.bigbtn:hover{background:#3F6B94}
+.bigbtn:active{transform:translateY(2px); box-shadow:0 2px 0 #3B6389}
+.bigbtn.alt{background:var(--ok); box-shadow:0 4px 0 #478065}
+.bigbtn.alt:hover{background:#4F8C6F}
+.bigbtn.warm{background:#C98A3C; box-shadow:0 4px 0 #A9743F}
+.bigbtn.warm:hover{background:#B87C33}
+.bigbtn.plum{background:#8E7CC3; box-shadow:0 4px 0 #71619F}
+.bigbtn.plum:hover{background:#7E6DB3}
+.bigbtn.ghost{background:var(--card); color:var(--ink2); border:2px solid var(--line); box-shadow:0 4px 0 #DDD4C6}
+.bigbtn.ghost:hover{background:#F7F2E9; color:var(--accent); border-color:var(--accent)}
+.bigbtn.ghost:active{box-shadow:0 2px 0 #DDD4C6}
+/* Bốn môn — luôn xếp 2 cột để bé thấy đủ bốn nút cùng lúc, vị trí không đổi */
+.modes{display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:620px; margin:26px auto 0}
+.modes .bigbtn{width:100%; padding:19px 20px}
+.calmnote{
+  display:inline-block; margin-top:22px; background:var(--accent-soft); color:var(--accent);
+  border-radius:14px; padding:12px 20px; font-size:16px; line-height:1.6; font-weight:600; text-align:left;
+}
+.rulebox{max-width:560px; margin:22px auto 0; text-align:left; background:var(--hint-soft);
+  border-radius:14px; padding:14px 20px; font-size:16px; line-height:1.7; color:#8A6224; font-weight:600}
+.rulebox b{color:#6E4D18}
+.modehint{margin-top:16px; font-size:15px; color:var(--ink3); font-weight:600}
+
+/* ── Thanh điểm — vị trí CỐ ĐỊNH, không bao giờ đổi chỗ ── */
+.scorebar{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px}
+.chip{border-radius:999px; padding:7px 18px; font-size:16px; font-weight:800; white-space:nowrap}
+.chip.q{background:var(--accent-soft); color:var(--accent)}
+.chip.s{background:var(--ok-soft); color:var(--ok)}
+.chip.r{background:var(--hint-soft); color:var(--hint)}
+.bar{flex:1; min-width:140px; height:12px; background:var(--line); border-radius:999px; overflow:hidden}
+.bar span{display:block; height:100%; background:var(--ok); border-radius:999px; transition:width .3s}
+
+/* ── Câu hỏi ── */
+.qcard{padding:22px 24px}
+.qtop{display:flex; gap:16px; align-items:flex-start}
+.qicon{flex:0 0 84px}
+.qicon svg{width:84px; height:auto; display:block}
+.qtag{display:inline-block; background:var(--accent-soft); color:var(--accent); font-size:13px;
+  font-weight:800; border-radius:999px; padding:3px 13px; margin-bottom:8px; letter-spacing:.4px}
+.qtext{font-size:26px; font-weight:800; line-height:1.5}
+.qsub{font-size:16px; color:var(--ink2); font-weight:600; margin-top:6px}
+
+.opts{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px}
+.opt{
+  display:flex; align-items:center; gap:12px; background:#FDFBF7; border:2px solid var(--line);
+  border-radius:14px; padding:15px 16px; text-align:left; font-size:20px; font-weight:700;
+  transition:border-color .15s, background .15s, opacity .2s;
+}
+.opt:hover:not(:disabled){border-color:var(--accent); background:var(--accent-soft)}
+.opt .letter{
+  flex:0 0 38px; height:38px; border-radius:11px; background:var(--accent-soft); color:var(--accent);
+  display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px;
+}
+.opt .label{flex:1}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--ok); background:var(--ok-soft)}
+.opt.right .letter{background:#CFE6DA; color:var(--ok)}
+.opt.chosen-wrong{border-color:var(--warn); background:var(--warn-soft)}
+.opt.chosen-wrong .letter{background:#F6D9D3; color:var(--warn)}
+.opt.faded{opacity:.28}
+.opt.showans{border-color:var(--ok); border-style:dashed; background:var(--ok-soft)}
+
+.feedback{margin-top:16px; border-radius:14px; padding:15px 18px; font-size:19px; font-weight:700; line-height:1.6}
+.feedback.ok{background:var(--ok-soft); color:var(--ok)}
+.feedback.no{background:var(--warn-soft); color:var(--warn)}
+.feedback .sub{display:block; font-size:16px; font-weight:600; margin-top:6px; color:var(--ink2)}
+.feedback.no .sub{color:#9A5142}
+.nextbtn{
+  display:block; margin:16px auto 0; background:var(--accent); color:#fff; font-size:21px;
+  font-weight:800; padding:15px 44px; border-radius:999px; box-shadow:0 4px 0 #3B6389;
+}
+.nextbtn:hover{background:#3F6B94}
+.nextbtn:active{transform:translateY(2px); box-shadow:0 2px 0 #3B6389}
+
+/* ── Bảng báo trước lượt mới — bé biết điều gì sắp xảy ra ── */
+.roundcard{padding:34px 28px; text-align:center}
+.roundcard h3{font-size:27px; font-weight:800; margin:14px 0 12px}
+.roundcard p{color:var(--ink2); max-width:520px; margin:0 auto 8px; font-size:18px}
+.roundpic{max-width:150px; margin:0 auto}
+.roundpic svg{width:100%; height:auto; display:block}
+.roundlist{max-width:480px; margin:18px auto 0; text-align:left}
+.roundlist div{background:var(--hint-soft); color:#8A6224; border-radius:12px; padding:9px 16px;
+  margin-bottom:7px; font-size:16px; font-weight:600}
+
+/* ── Kết thúc ── */
+.end{text-align:center; padding:40px 28px}
+.end h2{font-size:32px; font-weight:800; margin:14px 0 8px}
+.endpic{max-width:220px; margin:0 auto}
+.endpic svg{width:100%; height:auto; display:block}
+.bigscore{font-size:56px; font-weight:800; color:var(--ok); line-height:1.2; margin:10px 0 2px}
+.bigscore small{font-size:22px; color:var(--ink3); font-weight:700}
+.medal{font-size:22px; font-weight:800; margin-top:6px}
+.endstats{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:20px}
+.stat{background:var(--accent-soft); color:var(--accent); border-radius:14px; padding:12px 22px;
+  font-size:16px; font-weight:700; min-width:130px}
+.stat b{display:block; font-size:28px; font-weight:800}
+.endrow{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:26px}
+
+@media (max-width:720px){
+  body{font-size:18px; padding:12px}
+  .opts{grid-template-columns:1fr}
+  .modes{grid-template-columns:1fr}
+  .qtext{font-size:22px}
+  .qicon{flex:0 0 64px} .qicon svg{width:64px}
+  .start h2{font-size:28px}
+  .bigbtn{font-size:20px; padding:17px 34px}
+  .bigscore{font-size:46px}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <h1>✏️ Toán · Tiếng Việt · Tiếng Anh · Công nghệ</h1>
+    <button class="iconbtn" id="musicBtn" onclick="toggleMusic()" aria-label="Bật hoặc tắt nhạc nền">
+      <span id="musicIcon">🎵</span><span id="musicText">Nhạc: Bật</span>
+    </button>
+    <button class="iconbtn" id="soundBtn" onclick="toggleSound()" aria-label="Bật hoặc tắt tiếng khen và giọng đọc">
+      <span id="soundIcon">🔔</span><span id="soundText">Âm thanh: Bật</span>
+    </button>
+  </div>
+
+  <!-- ══ BẮT ĐẦU ══ -->
+  <div class="card start" id="screenStart">
+    <div class="hero" id="heroStart"></div>
+    <h2>Bốn môn học</h2>
+    <p>Chào bạn! Mình là bạn Cú.</p>
+    <p>Mỗi bài có <b>20 câu</b>, mỗi câu có <b>4 đáp án</b>. Bạn chọn <b>một trong bốn môn</b> để làm nhé.</p>
+    <div class="rulebox">
+      <b>Cách tính điểm</b><br>
+      • Trả lời đúng ngay lần đầu: <b>10 điểm</b>.<br>
+      • Chưa đúng thì <b>không sao</b> — mình đi tiếp câu sau, xong 20 câu sẽ quay lại.<br>
+      • Quay lại lần 2 mà đúng: <b>8 điểm</b>. Lần 3: <b>6 điểm</b>. Mỗi lần sau bớt <b>2 điểm</b>.<br>
+      • Điểm thấp nhất là <b>0</b>, không bao giờ bị âm.<br>
+      • Điểm cao nhất của một bài: <b>200 điểm</b>.
+    </div>
+    <div class="calmnote">
+      🕊️ Không tính giờ. Bạn cứ nghĩ thật kỹ.<br>
+      Chọn chưa đúng cũng không sao, mình sẽ giúp bạn.
+    </div>
+    <div class="modes">
+      <button class="bigbtn" onclick="startRound('math')">🔢 Toán</button>
+      <button class="bigbtn alt" onclick="startRound('viet')">📖 Tiếng Việt</button>
+      <button class="bigbtn warm" onclick="startRound('anh')">🔤 Tiếng Anh</button>
+      <button class="bigbtn plum" onclick="startRound('congnghe')">🔌 Công nghệ</button>
+    </div>
+    <div class="modehint" id="modeHint"></div>
+  </div>
+
+  <!-- ══ BÁO TRƯỚC LƯỢT MỚI ══ -->
+  <div class="card roundcard hide" id="screenRound">
+    <div class="roundpic" id="roundPic"></div>
+    <h3 id="roundTitle"></h3>
+    <p id="roundText"></p>
+    <div class="roundlist" id="roundList"></div>
+    <button class="nextbtn" id="roundGo">Bắt đầu →</button>
+  </div>
+
+  <!-- ══ CHƠI ══ -->
+  <div id="screenPlay" class="hide">
+    <div class="scorebar">
+      <span class="chip q" id="chipQ"></span>
+      <span class="chip s" id="chipS"></span>
+      <span class="chip r" id="chipR"></span>
+      <div class="bar"><span id="barFill" style="width:0%"></span></div>
+    </div>
+    <div class="card qcard">
+      <div class="qtop">
+        <div class="qicon" id="qIcon"></div>
+        <div style="flex:1">
+          <span class="qtag" id="qTag"></span>
+          <div class="qtext" id="qText"></div>
+          <div class="qsub" id="qSub"></div>
+        </div>
+      </div>
+      <div class="opts" id="optsBox"></div>
+      <div class="feedback hide" id="feedbackBox" role="status" aria-live="polite"></div>
+      <button class="nextbtn hide" id="nextBtn">Câu tiếp theo →</button>
+    </div>
+  </div>
+
+  <!-- ══ KẾT THÚC ══ -->
+  <div class="card end hide" id="screenEnd">
+    <div class="endpic" id="endArt"></div>
+    <h2 id="endTitle">Chúc mừng bạn!</h2>
+    <div class="bigscore" id="endScore"></div>
+    <div class="medal" id="endMedal"></div>
+    <p id="endText" style="color:var(--ink2);max-width:540px;margin:14px auto 0"></p>
+    <div class="endstats" id="endStats"></div>
+    <div class="endrow" id="endButtons"></div>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   1. HÌNH VẼ — SVG nằm ngay trong file, không có file ảnh rời
+   ═══════════════════════════════════════════════════════════════════════ */
+const C = {
+  ink:'#2E3D50', line:'#DCD2C0', paper:'#FBF6EE', accent:'#4B7BA8', accentD:'#3B6389',
+  ok:'#5B9E7E', okD:'#478065', yel:'#E4B84D', red:'#CE5540', pink:'#E39AA6',
+  brown:'#A9743F', brownD:'#8B5D31', cream:'#F4EFE6', sky:'#E6F0F7', purple:'#8E7CC3',
+};
+const icon = inner =>
+  '<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' + inner + '</svg>';
+
+/* ── Bạn Cú — nhân vật dẫn chuyện, GIỮ NGUYÊN hình dáng ở mọi màn ── */
+function owl(mood){
+  const happy = mood === 'happy', sad = mood === 'soft';
+  let s = '<svg viewBox="0 0 100 110" preserveAspectRatio="xMidYMid meet" aria-hidden="true">';
+  s += '<ellipse cx="50" cy="62" rx="34" ry="38" fill="' + C.brown + '"/>';            // thân
+  s += '<ellipse cx="50" cy="70" rx="23" ry="27" fill="' + C.cream + '"/>';            // bụng
+  s += '<path d="M16 52 q-10 22 6 38 q6 -20 4 -34 Z" fill="' + C.brownD + '"/>';       // cánh trái
+  s += '<path d="M84 52 q10 22 -6 38 q-6 -20 -4 -34 Z" fill="' + C.brownD + '"/>';     // cánh phải
+  s += '<path d="M22 28 q6 -14 16 -4 Z" fill="' + C.brownD + '"/>';                    // chỏm tai
+  s += '<path d="M78 28 q-6 -14 -16 -4 Z" fill="' + C.brownD + '"/>';
+  s += '<circle cx="37" cy="44" r="14" fill="#fff"/><circle cx="63" cy="44" r="14" fill="#fff"/>';
+  const ey = happy ? 41 : 44;
+  s += '<circle cx="37" cy="' + ey + '" r="6" fill="' + C.ink + '"/><circle cx="63" cy="' + ey + '" r="6" fill="' + C.ink + '"/>';
+  s += '<circle cx="39" cy="' + (ey - 2) + '" r="2" fill="#fff"/><circle cx="65" cy="' + (ey - 2) + '" r="2" fill="#fff"/>';
+  if(happy) s += '<path d="M28 36 q9 -6 18 -1 M54 35 q9 -5 18 1" stroke="' + C.brownD + '" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+  if(sad)   s += '<path d="M28 34 q9 3 18 1 M54 35 q9 -2 18 -1" stroke="' + C.brownD + '" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+  s += '<path d="M50 52 l-7 8 h14 Z" fill="' + C.yel + '"/>';                          // mỏ
+  s += '<path d="M40 98 h8 M52 98 h8" stroke="' + C.yel + '" stroke-width="5" stroke-linecap="round"/>';
+  if(happy) s += '<g stroke="' + C.yel + '" stroke-width="2.6" stroke-linecap="round">'
+              + '<line x1="10" y1="24" x2="3" y2="20"/><line x1="8" y1="36" x2="0" y2="36"/>'
+              + '<line x1="90" y1="24" x2="97" y2="20"/><line x1="92" y1="36" x2="100" y2="36"/></g>';
+  return s + '</svg>';
+}
+
+/* ── Hình cho từng chủ đề câu hỏi (chỉ 1 hình mỗi lúc, không rối mắt) ── */
+const ICON = {};
+ICON.cong = icon('<rect x="14" y="24" width="72" height="52" rx="10" fill="' + C.sky + '"/>'
+  + '<path d="M34 50 h18 M43 41 v18" stroke="' + C.accent + '" stroke-width="7" stroke-linecap="round"/>'
+  + '<path d="M58 50 h18" stroke="' + C.red + '" stroke-width="7" stroke-linecap="round"/>');
+ICON.nhan = icon('<rect x="14" y="24" width="72" height="52" rx="10" fill="' + C.sky + '"/>'
+  + '<path d="M31 42 l14 16 M45 42 l-14 16" stroke="' + C.accent + '" stroke-width="7" stroke-linecap="round"/>'
+  + '<circle cx="66" cy="41" r="4.5" fill="' + C.red + '"/><circle cx="66" cy="59" r="4.5" fill="' + C.red + '"/>'
+  + '<path d="M56 50 h20" stroke="' + C.red + '" stroke-width="5" stroke-linecap="round"/>');
+ICON.timx = icon('<rect x="14" y="24" width="72" height="52" rx="10" fill="' + C.sky + '"/>'
+  + '<text x="50" y="66" font-size="42" font-weight="800" text-anchor="middle" fill="' + C.purple + '" font-family="Arial">x</text>'
+  + '<path d="M24 34 q26 -12 52 0" stroke="' + C.accent + '" stroke-width="3" fill="none" stroke-linecap="round"/>');
+ICON.dovat = icon('<rect x="10" y="42" width="80" height="20" rx="5" fill="' + C.yel + '"/>'
+  + '<g stroke="' + C.brownD + '" stroke-width="3" stroke-linecap="round">'
+  + '<line x1="24" y1="42" x2="24" y2="54"/><line x1="38" y1="42" x2="38" y2="50"/>'
+  + '<line x1="52" y1="42" x2="52" y2="54"/><line x1="66" y1="42" x2="66" y2="50"/>'
+  + '<line x1="80" y1="42" x2="80" y2="54"/></g>');
+ICON.thoigian = icon('<circle cx="50" cy="50" r="34" fill="#fff" stroke="' + C.accent + '" stroke-width="5"/>'
+  + '<path d="M50 50 v-19 M50 50 l14 9" stroke="' + C.ink + '" stroke-width="5" stroke-linecap="round" fill="none"/>'
+  + '<circle cx="50" cy="50" r="4" fill="' + C.red + '"/>');
+ICON.hinh = icon('<rect x="12" y="30" width="40" height="40" rx="4" fill="' + C.accent + '"/>'
+  + '<path d="M70 28 l20 42 h-40 Z" fill="' + C.yel + '"/>');
+ICON.loivan = icon('<rect x="18" y="18" width="64" height="64" rx="8" fill="#fff" stroke="' + C.line + '" stroke-width="3"/>'
+  + '<path d="M30 36 h40 M30 48 h40 M30 60 h26" stroke="' + C.accent + '" stroke-width="4" stroke-linecap="round"/>'
+  + '<circle cx="74" cy="66" r="12" fill="' + C.ok + '"/>'
+  + '<path d="M68 66 l4 5 l8 -9" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>');
+ICON.dayso = icon('<circle cx="22" cy="50" r="10" fill="' + C.accent + '"/><circle cx="46" cy="50" r="10" fill="' + C.ok + '"/>'
+  + '<circle cx="70" cy="50" r="10" fill="' + C.yel + '"/>'
+  + '<path d="M84 46 l6 4 l-6 4" stroke="' + C.ink + '" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>');
+ICON.chinhta = icon('<rect x="16" y="16" width="68" height="68" rx="8" fill="#fff" stroke="' + C.line + '" stroke-width="3"/>'
+  + '<text x="50" y="64" font-size="42" font-weight="800" text-anchor="middle" fill="' + C.accent + '" font-family="Arial">Aa</text>');
+ICON.tuloai = icon('<rect x="12" y="26" width="34" height="22" rx="5" fill="' + C.accent + '"/>'
+  + '<rect x="54" y="26" width="34" height="22" rx="5" fill="' + C.ok + '"/>'
+  + '<rect x="12" y="54" width="34" height="22" rx="5" fill="' + C.yel + '"/>'
+  + '<rect x="54" y="54" width="34" height="22" rx="5" fill="' + C.pink + '"/>');
+ICON.nghia = icon('<circle cx="34" cy="50" r="20" fill="' + C.accent + '" opacity=".75"/>'
+  + '<circle cx="66" cy="50" r="20" fill="' + C.yel + '" opacity=".8"/>'
+  + '<path d="M42 40 h16 M42 60 h16" stroke="#fff" stroke-width="3" stroke-linecap="round"/>');
+ICON.daucau = icon('<rect x="16" y="16" width="68" height="68" rx="8" fill="#fff" stroke="' + C.line + '" stroke-width="3"/>'
+  + '<text x="50" y="66" font-size="46" font-weight="800" text-anchor="middle" fill="' + C.red + '" font-family="Arial">?!</text>');
+ICON.cau = icon('<rect x="14" y="24" width="72" height="52" rx="8" fill="' + C.sky + '"/>'
+  + '<path d="M26 40 h30" stroke="' + C.accent + '" stroke-width="6" stroke-linecap="round"/>'
+  + '<path d="M26 52 h44" stroke="' + C.ok + '" stroke-width="6" stroke-linecap="round"/>'
+  + '<path d="M26 64 h20" stroke="' + C.yel + '" stroke-width="6" stroke-linecap="round"/>');
+
+/* ── Hình cho môn Tiếng Anh ── */
+ICON.chao = icon('<path d="M14 26 h72 q6 0 6 6 v30 q0 6 -6 6 h-38 l-14 12 v-12 h-20 q-6 0 -6 -6 v-30 q0 -6 6 -6 Z" fill="' + C.sky + '" stroke="' + C.accent + '" stroke-width="3"/>'
+  + '<text x="50" y="56" font-size="26" font-weight="800" text-anchor="middle" fill="' + C.accent + '" font-family="Arial">Hi!</text>');
+ICON.demso = icon('<rect x="10" y="52" width="22" height="22" rx="4" fill="' + C.accent + '"/>'
+  + '<rect x="39" y="52" width="22" height="22" rx="4" fill="' + C.ok + '"/>'
+  + '<rect x="68" y="52" width="22" height="22" rx="4" fill="' + C.yel + '"/>'
+  + '<text x="50" y="40" font-size="26" font-weight="800" text-anchor="middle" fill="' + C.ink + '" font-family="Arial">123</text>');
+ICON.mausac = icon('<path d="M50 16 a34 34 0 1 0 8 67 q-8 -6 -2 -12 q5 -5 12 -2 a16 16 0 0 0 16 -19 q-4 -30 -34 -34 Z" fill="' + C.cream + '" stroke="' + C.line + '" stroke-width="3"/>'
+  + '<circle cx="38" cy="34" r="6.5" fill="' + C.red + '"/><circle cx="26" cy="50" r="6.5" fill="' + C.accent + '"/>'
+  + '<circle cx="34" cy="66" r="6.5" fill="' + C.ok + '"/><circle cx="58" cy="30" r="6.5" fill="' + C.yel + '"/>');
+ICON.convat = icon('<path d="M24 34 l4 -18 l16 12 Z" fill="' + C.brown + '"/><path d="M76 34 l-4 -18 l-16 12 Z" fill="' + C.brown + '"/>'
+  + '<ellipse cx="50" cy="56" rx="30" ry="26" fill="' + C.brown + '"/>'
+  + '<circle cx="39" cy="52" r="4.5" fill="' + C.ink + '"/><circle cx="61" cy="52" r="4.5" fill="' + C.ink + '"/>'
+  + '<path d="M50 62 l-5 5 h10 Z" fill="' + C.pink + '"/>'
+  + '<path d="M50 67 q-6 7 -13 3 M50 67 q6 7 13 3" stroke="' + C.brownD + '" stroke-width="2.5" fill="none" stroke-linecap="round"/>');
+ICON.dodunghoc = icon('<path d="M22 78 l6 -22 l30 -34 l14 12 l-30 34 Z" fill="' + C.yel + '"/>'
+  + '<path d="M28 56 l14 12" stroke="' + C.brownD + '" stroke-width="3"/>'
+  + '<path d="M22 78 l6 -8 l6 5 Z" fill="' + C.ink + '"/>'
+  + '<rect x="62" y="20" width="24" height="60" rx="4" fill="' + C.accent + '" opacity=".85"/>'
+  + '<g stroke="#fff" stroke-width="2.5" stroke-linecap="round"><line x1="66" y1="32" x2="74" y2="32"/>'
+  + '<line x1="66" y1="44" x2="78" y2="44"/><line x1="66" y1="56" x2="74" y2="56"/><line x1="66" y1="68" x2="78" y2="68"/></g>');
+ICON.giadinh = icon('<circle cx="32" cy="34" r="12" fill="' + C.accent + '"/><path d="M14 78 q0 -20 18 -20 q18 0 18 20 Z" fill="' + C.accent + '"/>'
+  + '<circle cx="66" cy="38" r="10" fill="' + C.pink + '"/><path d="M52 78 q0 -18 14 -18 q14 0 14 18 Z" fill="' + C.pink + '"/>'
+  + '<circle cx="86" cy="52" r="7" fill="' + C.yel + '"/><path d="M76 78 q0 -12 10 -12 q10 0 10 12 Z" fill="' + C.yel + '"/>');
+ICON.doan = icon('<path d="M50 30 q-24 -6 -26 20 q-2 26 26 32 q28 -6 26 -32 q-2 -26 -26 -20 Z" fill="' + C.red + '"/>'
+  + '<path d="M50 30 v-12" stroke="' + C.brownD + '" stroke-width="4" stroke-linecap="round"/>'
+  + '<path d="M50 22 q12 -10 20 -2 q-8 10 -20 2 Z" fill="' + C.ok + '"/>'
+  + '<path d="M38 46 q4 -8 10 -8" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".6"/>');
+ICON.cauanh = icon('<rect x="14" y="24" width="72" height="52" rx="10" fill="#fff" stroke="' + C.line + '" stroke-width="3"/>'
+  + '<text x="50" y="58" font-size="26" font-weight="800" text-anchor="middle" fill="' + C.accent + '" font-family="Arial">A B C</text>'
+  + '<path d="M30 68 h40" stroke="' + C.ok + '" stroke-width="4" stroke-linecap="round"/>');
+
+/* ── Hình cho môn Công nghệ ── */
+ICON.andien = icon('<rect x="26" y="40" width="48" height="40" rx="8" fill="' + C.cream + '" stroke="' + C.line + '" stroke-width="3"/>'
+  + '<path d="M38 40 v-16 M62 40 v-16" stroke="' + C.ink + '" stroke-width="6" stroke-linecap="round"/>'
+  + '<path d="M52 48 l-12 16 h10 l-4 12 14 -18 h-10 Z" fill="' + C.yel + '"/>'
+  + '<circle cx="78" cy="24" r="15" fill="' + C.red + '"/>'
+  + '<path d="M78 16 v10 M78 31 v1.5" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>');
+ICON.dodungnha = icon('<rect x="44" y="58" width="12" height="24" rx="3" fill="' + C.brownD + '"/>'
+  + '<rect x="34" y="80" width="32" height="6" rx="3" fill="' + C.brownD + '"/>'
+  + '<path d="M50 52 q-26 -2 -26 -16 q0 -14 26 -16 q26 2 26 16 q0 14 -26 16 Z" fill="' + C.yel + '"/>'
+  + '<g stroke="' + C.yel + '" stroke-width="3" stroke-linecap="round" opacity=".85">'
+  + '<line x1="16" y1="44" x2="8" y2="50"/><line x1="84" y1="44" x2="92" y2="50"/><line x1="50" y1="56" x2="50" y2="52"/></g>');
+ICON.maytinh = icon('<rect x="12" y="20" width="76" height="50" rx="6" fill="' + C.ink + '"/>'
+  + '<rect x="18" y="26" width="64" height="38" rx="3" fill="' + C.sky + '"/>'
+  + '<path d="M26 56 v-12 M38 56 v-20 M50 56 v-8 M62 56 v-16" stroke="' + C.accent + '" stroke-width="4" stroke-linecap="round"/>'
+  + '<rect x="40" y="70" width="20" height="8" fill="' + C.ink + '"/><rect x="28" y="78" width="44" height="6" rx="3" fill="' + C.ink + '"/>');
+ICON.thucong = icon('<path d="M30 22 l34 40 M70 22 l-34 40" stroke="' + C.ink + '" stroke-width="5" stroke-linecap="round"/>'
+  + '<circle cx="32" cy="72" r="10" fill="none" stroke="' + C.accent + '" stroke-width="5"/>'
+  + '<circle cx="68" cy="72" r="10" fill="none" stroke="' + C.accent + '" stroke-width="5"/>'
+  + '<circle cx="50" cy="46" r="4" fill="' + C.red + '"/>');
+ICON.baoquan = icon('<path d="M50 84 q-32 -20 -32 -40 q0 -18 16 -18 q11 0 16 11 q5 -11 16 -11 q16 0 16 18 q0 20 -32 40 Z" fill="' + C.pink + '"/>'
+  + '<path d="M38 44 q8 -8 16 -4" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" opacity=".7"/>');
+ICON.sanpham = icon('<path d="M28 76 v-14" stroke="' + C.brownD + '" stroke-width="5" stroke-linecap="round"/>'
+  + '<circle cx="28" cy="44" r="18" fill="' + C.ok + '"/>'
+  + '<path d="M52 78 v-26 l20 -16 l20 16 v26 Z" fill="' + C.cream + '" stroke="' + C.line + '" stroke-width="3"/>'
+  + '<path d="M48 54 l24 -19 l24 19" stroke="' + C.red + '" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+  + '<rect x="66" y="62" width="12" height="16" rx="2" fill="' + C.accent + '"/>');
+
+const TOPIC_NAME = {
+  cong:'Cộng trừ', nhan:'Nhân chia', timx:'Tìm x', dovat:'Đơn vị đo', thoigian:'Thời gian',
+  hinh:'Hình học', loivan:'Bài toán', dayso:'Dãy số',
+  chinhta:'Chính tả', tuloai:'Từ loại', nghia:'Nghĩa của từ', daucau:'Dấu câu', cau:'Câu',
+  chao:'Chào hỏi', demso:'Số đếm', mausac:'Màu sắc', convat:'Con vật', dodunghoc:'Đồ dùng học tập',
+  giadinh:'Gia đình', doan:'Đồ ăn', cauanh:'Câu tiếng Anh',
+  andien:'An toàn điện', dodungnha:'Đồ dùng trong nhà', maytinh:'Máy tính', thucong:'Làm thủ công',
+  baoquan:'Giữ gìn đồ dùng', sanpham:'Tự nhiên hay do người làm',
+};
+
+/* Huy chương ở màn kết thúc */
+function medalArt(kind){
+  const col = kind === 'gold' ? '#E4B84D' : kind === 'silver' ? '#C3CBD4' : kind === 'bronze' ? '#C98A3C' : C.accent;
+  const colD = kind === 'gold' ? '#C29A34' : kind === 'silver' ? '#9FAAB6' : kind === 'bronze' ? '#A9743F' : C.accentD;
+  let s = '<svg viewBox="0 0 120 130" preserveAspectRatio="xMidYMid meet" aria-hidden="true">';
+  s += '<path d="M40 8 l16 46 h-26 Z" fill="' + C.red + '"/><path d="M80 8 l-16 46 h26 Z" fill="' + C.accent + '"/>';
+  s += '<circle cx="60" cy="82" r="38" fill="' + col + '"/><circle cx="60" cy="82" r="30" fill="' + colD + '" opacity=".35"/>';
+  s += '<path d="M60 62 l6 13 14 2 -10 10 3 14 -13 -7 -13 7 3 -14 -10 -10 14 -2 Z" fill="#fff" opacity=".92"/>';
+  return s + '</svg>';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   2. NGÂN HÀNG CÂU HỎI — 60 câu Toán + 60 câu Tiếng Việt
+   Q(chủ đề, câu hỏi, '4 đáp án cách nhau bằng |', số thứ tự đáp án đúng, lời gợi ý)
+   ⚠ Vị trí A/B/C/D được XÁO TRỘN mỗi lần hiện ra, nên không cần lo đáp án
+     đúng hay rơi vào cùng một chỗ.
+   ═══════════════════════════════════════════════════════════════════════ */
+function Q(topic, q, opts, ans, hint){
+  return { topic:topic, q:q, opts:opts.split('|'), ans:ans, hint:hint };
+}
+
+const BANK = {};
+
+BANK.math = [
+  /* ── Cộng trừ có nhớ (10) ── */
+  Q('cong','47 + 28 = ?','75|65|76|74',0,'Cộng 7 với 8 được 15, viết 5 nhớ 1.'),
+  Q('cong','63 + 19 = ?','82|72|83|81',0,'19 gần bằng 20. Lấy 63 + 20 rồi bớt 1.'),
+  Q('cong','85 − 37 = ?','48|58|47|52',0,'5 không trừ được 7, mượn 1 chục thành 15 − 7.'),
+  Q('cong','92 − 46 = ?','46|56|44|52',0,'2 không trừ được 6, mượn 1 chục thành 12 − 6.'),
+  Q('cong','156 + 244 = ?','400|390|410|401',0,'56 + 44 vừa đúng 100.'),
+  Q('cong','305 − 128 = ?','177|187|167|183',0,'Trừ hàng đơn vị trước: 15 − 8 = 7.'),
+  Q('cong','234 + 189 = ?','423|413|424|433',0,'234 + 189 = 234 + 200 − 11.'),
+  Q('cong','500 − 264 = ?','236|246|234|226',0,'500 − 264 = 500 − 300 + 36.'),
+  Q('cong','78 + 45 = ?','123|113|124|133',0,'78 + 45 = 78 + 2 + 43.'),
+  Q('cong','100 − 37 = ?','63|73|67|53',0,'100 − 37 = 100 − 40 + 3.'),
+  /* ── Nhân chia (10) ── */
+  Q('nhan','7 × 8 = ?','56|54|48|64',0,'Bạn hãy đọc lại bảng nhân 7.'),
+  Q('nhan','9 × 6 = ?','54|56|48|63',0,'9 × 6 = 10 × 6 − 6.'),
+  Q('nhan','42 : 6 = ?','7|6|8|9',0,'6 nhân với mấy thì được 42?'),
+  Q('nhan','72 : 8 = ?','9|8|7|6',0,'8 nhân với mấy thì được 72?'),
+  Q('nhan','4 × 25 = ?','100|75|125|90',0,'4 lần 25 giống như 4 cái phần tư của 100.'),
+  Q('nhan','6 × 7 = ?','42|36|48|40',0,'Bạn hãy đọc lại bảng nhân 6.'),
+  Q('nhan','48 : 8 = ?','6|7|8|5',0,'8 nhân với mấy thì được 48?'),
+  Q('nhan','5 × 12 = ?','60|50|65|55',0,'5 × 12 = 5 × 10 + 5 × 2.'),
+  Q('nhan','81 : 9 = ?','9|8|7|10',0,'9 nhân với mấy thì được 81?'),
+  Q('nhan','3 × 15 = ?','45|35|40|50',0,'3 × 15 = 3 × 10 + 3 × 5.'),
+  /* ── Tìm x (8) ── */
+  Q('timx','x + 15 = 40. x bằng bao nhiêu?','25|35|55|20',0,'Muốn tìm số hạng chưa biết, lấy tổng trừ số hạng đã biết.'),
+  Q('timx','x − 12 = 28. x bằng bao nhiêu?','40|16|38|30',0,'Muốn tìm số bị trừ, lấy hiệu cộng với số trừ.'),
+  Q('timx','36 − x = 14. x bằng bao nhiêu?','22|24|50|20',0,'Muốn tìm số trừ, lấy số bị trừ trừ đi hiệu.'),
+  Q('timx','x × 4 = 32. x bằng bao nhiêu?','8|6|9|128',0,'Muốn tìm thừa số chưa biết, lấy tích chia cho thừa số đã biết.'),
+  Q('timx','x : 5 = 6. x bằng bao nhiêu?','30|11|25|35',0,'Muốn tìm số bị chia, lấy thương nhân với số chia.'),
+  Q('timx','7 × x = 63. x bằng bao nhiêu?','9|8|7|56',0,'7 nhân với mấy thì được 63?'),
+  Q('timx','x + 26 = 51. x bằng bao nhiêu?','25|35|77|24',0,'Lấy 51 trừ đi 26.'),
+  Q('timx','45 : x = 9. x bằng bao nhiêu?','5|4|6|405',0,'Muốn tìm số chia, lấy số bị chia chia cho thương.'),
+  /* ── Đơn vị đo (8) ── */
+  Q('dovat','1 m bằng bao nhiêu cm?','100 cm|10 cm|1000 cm|50 cm',0,'Một mét chia thành 100 phần bằng nhau, mỗi phần là 1 xăng-ti-mét.'),
+  Q('dovat','1 kg bằng bao nhiêu g?','1000 g|100 g|10 g|500 g',0,'Một ki-lô-gam chia thành 1000 phần, mỗi phần là 1 gam.'),
+  Q('dovat','2 m 5 cm bằng bao nhiêu cm?','205 cm|250 cm|25 cm|207 cm',0,'2 m là 200 cm, cộng thêm 5 cm nữa.'),
+  Q('dovat','1 lít bằng bao nhiêu ml?','1000 ml|100 ml|10 ml|500 ml',0,'Một lít chia thành 1000 phần, mỗi phần là 1 mi-li-lít.'),
+  Q('dovat','3 kg 200 g bằng bao nhiêu g?','3200 g|320 g|3020 g|3002 g',0,'3 kg là 3000 g, cộng thêm 200 g nữa.'),
+  Q('dovat','250 cm bằng bao nhiêu?','2 m 50 cm|25 m|2 m 5 cm|20 m 5 cm',0,'Cứ 100 cm là 1 m. 250 cm có 2 lần 100 cm và còn dư 50 cm.'),
+  Q('dovat','1 giờ bằng bao nhiêu phút?','60 phút|100 phút|30 phút|24 phút',0,'Kim phút đi hết một vòng đồng hồ là 60 phút.'),
+  Q('dovat','1 ngày có bao nhiêu giờ?','24 giờ|12 giờ|60 giờ|30 giờ',0,'Một ngày gồm ban ngày và ban đêm, cộng lại là 24 giờ.'),
+  /* ── Thời gian (6) ── */
+  Q('thoigian','Phim bắt đầu lúc 8 giờ, chiếu dài 2 tiếng. Phim hết lúc mấy giờ?','10 giờ|9 giờ|11 giờ|6 giờ',0,'Lấy giờ bắt đầu cộng thêm số tiếng chiếu phim.'),
+  Q('thoigian','Bây giờ là 9 giờ 15 phút. 30 phút nữa là mấy giờ?','9 giờ 45 phút|9 giờ 35 phút|10 giờ 15 phút|8 giờ 45 phút',0,'Lấy 15 phút cộng thêm 30 phút.'),
+  Q('thoigian','Một tuần có mấy ngày?','7 ngày|5 ngày|10 ngày|30 ngày',0,'Bạn hãy đếm từ thứ Hai đến Chủ nhật.'),
+  Q('thoigian','Tháng 2 của năm thường có bao nhiêu ngày?','28 ngày|30 ngày|31 ngày|29 ngày',0,'Tháng 2 là tháng ngắn nhất trong năm.'),
+  Q('thoigian','Từ 7 giờ đến 11 giờ là mấy tiếng?','4 tiếng|3 tiếng|5 tiếng|18 tiếng',0,'Lấy 11 trừ đi 7.'),
+  Q('thoigian','Một năm có bao nhiêu tháng?','12 tháng|10 tháng|24 tháng|4 tháng',0,'Bạn hãy đếm từ tháng Một đến tháng Mười hai.'),
+  /* ── Hình học (6) ── */
+  Q('hinh','Hình vuông có cạnh 5 cm. Chu vi hình vuông là bao nhiêu?','20 cm|25 cm|10 cm|15 cm',0,'Chu vi hình vuông bằng cạnh nhân với 4.'),
+  Q('hinh','Hình chữ nhật dài 8 cm, rộng 3 cm. Chu vi là bao nhiêu?','22 cm|24 cm|11 cm|26 cm',0,'Chu vi bằng chiều dài cộng chiều rộng, rồi nhân với 2.'),
+  Q('hinh','Hình chữ nhật dài 8 cm, rộng 3 cm. Diện tích là bao nhiêu?','24 cm²|22 cm²|11 cm²|16 cm²',0,'Diện tích hình chữ nhật bằng chiều dài nhân chiều rộng.'),
+  Q('hinh','Hình vuông có cạnh 6 cm. Diện tích là bao nhiêu?','36 cm²|24 cm²|12 cm²|30 cm²',0,'Diện tích hình vuông bằng cạnh nhân với cạnh.'),
+  Q('hinh','Hình tam giác có mấy cạnh?','3 cạnh|4 cạnh|2 cạnh|5 cạnh',0,'Bạn hãy nhìn hình tam giác và đếm số cạnh.'),
+  Q('hinh','Hình vuông có mấy cạnh bằng nhau?','4 cạnh|3 cạnh|2 cạnh|1 cạnh',0,'Hình vuông có bốn cạnh và tất cả đều dài bằng nhau.'),
+  /* ── Bài toán có lời văn (8) ── */
+  Q('loivan','Lan có 24 viên kẹo, cho bạn 9 viên. Lan còn lại mấy viên?','15 viên|33 viên|16 viên|14 viên',0,'Cho bạn thì số kẹo giảm đi. Bạn hãy làm phép trừ.'),
+  Q('loivan','Mỗi hộp có 6 cái bút. 5 hộp có bao nhiêu cái bút?','30 cái|11 cái|25 cái|36 cái',0,'Có 5 hộp giống nhau, bạn hãy làm phép nhân.'),
+  Q('loivan','Có 36 quyển vở chia đều cho 4 bạn. Mỗi bạn được mấy quyển?','9 quyển|8 quyển|32 quyển|40 quyển',0,'Chia đều thì làm phép chia.'),
+  Q('loivan','Nam có 15 000 đồng, mua bút hết 8 000 đồng. Nam còn lại bao nhiêu?','7 000 đồng|23 000 đồng|8 000 đồng|6 000 đồng',0,'Mua hàng thì số tiền giảm đi. Bạn hãy làm phép trừ.'),
+  Q('loivan','Xe chở 45 bao gạo, đã dỡ xuống 18 bao. Trên xe còn mấy bao?','27 bao|63 bao|37 bao|26 bao',0,'Dỡ xuống thì số bao trên xe giảm đi.'),
+  Q('loivan','Lớp có 32 bạn, xếp thành 4 hàng đều nhau. Mỗi hàng mấy bạn?','8 bạn|7 bạn|9 bạn|28 bạn',0,'Xếp đều nhau thì làm phép chia.'),
+  Q('loivan','Mai hái 18 bông hoa. Hoa hái nhiều hơn Mai 7 bông. Hoa hái mấy bông?','25 bông|11 bông|24 bông|26 bông',0,'Nhiều hơn thì làm phép cộng.'),
+  Q('loivan','Một tá bút chì có 12 cái. Ba tá có bao nhiêu cái bút chì?','36 cái|15 cái|24 cái|33 cái',0,'Ba tá nghĩa là 3 lần 12 cái.'),
+  /* ── Dãy số và so sánh (4) ── */
+  Q('dayso','Số liền sau của 199 là số nào?','200|198|299|190',0,'Số liền sau là số lớn hơn 1 đơn vị.'),
+  Q('dayso','Dãy số: 2, 4, 6, 8, … Số tiếp theo là số nào?','10|9|12|11',0,'Bạn hãy xem mỗi số hơn số trước mấy đơn vị.'),
+  Q('dayso','Số nào lớn nhất: 345, 435, 354, 453?','453|435|354|345',0,'Bạn hãy so sánh chữ số hàng trăm trước.'),
+  Q('dayso','Dãy số: 5, 10, 15, 20, … Số tiếp theo là số nào?','25|21|30|24',0,'Mỗi số hơn số trước 5 đơn vị.'),
+];
+
+BANK.viet = [
+  /* ── Chính tả l / n (6) ── */
+  Q('chinhta','Từ nào viết đúng chính tả? (l hay n)','con lợn|con nợn|con lợm|con nợm',0,'Con vật này viết bằng chữ l, giống chữ đầu của từ “lá”.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (l hay n)','cái nón|cái lón|cái nóm|cái lóm',0,'Vật đội trên đầu che nắng, viết bằng chữ n.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (l hay n)','làm bài|nàm bài|làm bàj|nàm bàj',0,'Chữ đầu giống chữ đầu của từ “lớp”.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (l hay n)','nước uống|lước uống|nước uốn|lước uốn',0,'Thứ chúng ta uống hằng ngày, viết bằng chữ n.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (l hay n)','quả na|quả la|quả nà|quả là',0,'Đây là tên một loại quả, viết bằng chữ n.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (l hay n)','lớp học|nớp học|lớp hoc|nớp hoc',0,'Nơi bạn ngồi học, viết bằng chữ l và có dấu nặng ở chữ “học”.'),
+  /* ── Chính tả ch / tr (6) ── */
+  Q('chinhta','Từ nào viết đúng chính tả? (ch hay tr)','cây tre|cây che|cây trơ|cây chê',0,'Cây thân đốt, mọc thành bụi, viết bằng tr.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (ch hay tr)','con trâu|con châu|con trầu|con chầu',0,'Con vật kéo cày ngoài đồng, viết bằng tr.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (ch hay tr)','chăm chỉ|trăm chỉ|chăm trỉ|trăm trỉ',0,'Cả hai chữ đều viết bằng ch.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (ch hay tr)','trường học|chường học|trườn học|chườn học',0,'Nơi bạn đến học mỗi ngày, viết bằng tr.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (ch hay tr)','cái chổi|cái trổi|cái chôi|cái trôi',0,'Dụng cụ để quét nhà, viết bằng ch và có dấu hỏi.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (ch hay tr)','quả trứng|quả chứng|quả trưng|quả chưng',0,'Thứ gà đẻ ra, viết bằng tr và có dấu sắc.'),
+  /* ── Chính tả s / x (6) ── */
+  Q('chinhta','Từ nào viết đúng chính tả? (s hay x)','con sư tử|con xư tử|con sư tữ|con xư tữ',0,'Chúa tể rừng xanh, viết bằng s.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (s hay x)','xe đạp|se đạp|xe đạb|se đạb',0,'Phương tiện có hai bánh, viết bằng x.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (s hay x)','quả xoài|quả soài|quả xoàj|quả soàj',0,'Loại quả chín màu vàng, viết bằng x.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (s hay x)','ngôi sao|ngôi xao|ngôi sau|ngôi xau',0,'Thứ sáng lấp lánh trên trời ban đêm, viết bằng s.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (s hay x)','màu xanh|màu sanh|màu xanh lá|màu sanh lá',0,'Màu của lá cây, viết bằng x.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (s hay x)','sạch sẽ|xạch xẽ|sạch xẽ|xạch sẽ',0,'Cả hai chữ đều viết bằng s.'),
+  /* ── Chính tả d / gi / r (5) ── */
+  Q('chinhta','Từ nào viết đúng chính tả? (d, gi hay r)','con dao|con giao|con rao|con dau',0,'Vật dùng để cắt, thái, viết bằng d.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (d, gi hay r)','quả dưa|quả giưa|quả rưa|quả dữa',0,'Loại quả to, ruột đỏ, viết bằng d.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (d, gi hay r)','giúp đỡ|dúp đỡ|rúp đỡ|giúp đở',0,'Chữ đầu viết bằng gi, chữ sau có dấu ngã.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (d, gi hay r)','cái rổ|cái dổ|cái giổ|cái rỗ',0,'Đồ đan để đựng rau, viết bằng r và có dấu hỏi.'),
+  Q('chinhta','Từ nào viết đúng chính tả? (d, gi hay r)','tờ giấy|tờ dấy|tờ rấy|tờ giẫy',0,'Thứ để viết lên, viết bằng gi và có dấu sắc.'),
+  /* ── Dấu hỏi / dấu ngã (5) ── */
+  Q('chinhta','Từ nào viết đúng dấu? (dấu hỏi hay dấu ngã)','cái mũ|cái mủ|cái mú|cái mù',0,'Vật đội trên đầu, mang dấu ngã.'),
+  Q('chinhta','Từ nào viết đúng dấu? (dấu hỏi hay dấu ngã)','nghỉ ngơi|nghĩ ngơi|nghỉ ngời|nghĩ ngời',0,'Khi mệt thì ta làm việc này, mang dấu hỏi.'),
+  Q('chinhta','Từ nào viết đúng dấu? (dấu hỏi hay dấu ngã)','suy nghĩ|suy nghỉ|suy nghi|suy ngĩ',0,'Dùng đầu óc để tìm câu trả lời, mang dấu ngã.'),
+  Q('chinhta','Từ nào viết đúng dấu? (dấu hỏi hay dấu ngã)','sửa xe|sữa xe|sưa xe|sứa xe',0,'Xe hỏng thì mang đi làm việc này, mang dấu hỏi.'),
+  Q('chinhta','Từ nào viết đúng dấu? (dấu hỏi hay dấu ngã)','vẫn còn|vẩn còn|vân còn|vấn còn',0,'Nghĩa là “chưa hết”, mang dấu ngã.'),
+  /* ── Từ loại (8) ── */
+  Q('tuloai','Từ nào là danh từ?','cái bàn|chạy|đẹp|nhanh',0,'Danh từ là từ chỉ sự vật: người, con vật, đồ vật, cây cối.'),
+  Q('tuloai','Từ nào là động từ?','ăn|cái bàn|xanh|cao',0,'Động từ là từ chỉ hoạt động hoặc trạng thái.'),
+  Q('tuloai','Từ nào là tính từ?','đỏ|cái ghế|đi|quyển sách',0,'Tính từ là từ chỉ đặc điểm: màu sắc, hình dáng, tính chất.'),
+  Q('tuloai','Từ nào chỉ người?','bác sĩ|cái ghế|chạy|màu xanh',0,'Bạn hãy tìm từ gọi tên một nghề của con người.'),
+  Q('tuloai','Từ nào chỉ con vật?','con mèo|cái bàn|quyển sách|màu đỏ',0,'Bạn hãy tìm từ gọi tên một con vật.'),
+  Q('tuloai','Từ nào chỉ hoạt động?','đọc|quyển vở|màu vàng|con chó',0,'Hoạt động là việc mà người hoặc con vật làm.'),
+  Q('tuloai','Từ nào chỉ đặc điểm?','cao|học|cây|bạn',0,'Đặc điểm cho biết sự vật đó trông thế nào.'),
+  Q('tuloai','Từ nào là danh từ chỉ đồ vật?','cái bút|vui vẻ|hát|mềm',0,'Đồ vật là thứ ta cầm nắm được.'),
+  /* ── Từ trái nghĩa (7) ── */
+  Q('nghia','Từ trái nghĩa với “cao” là từ nào?','thấp|to|dài|rộng',0,'Trái nghĩa là nghĩa ngược lại hẳn.'),
+  Q('nghia','Từ trái nghĩa với “to” là từ nào?','nhỏ|dài|nặng|cao',0,'Trái nghĩa là nghĩa ngược lại hẳn.'),
+  Q('nghia','Từ trái nghĩa với “nóng” là từ nào?','lạnh|ấm|mát|khô',0,'Mùa hè thì nóng, mùa đông thì thế nào?'),
+  Q('nghia','Từ trái nghĩa với “sáng” là từ nào?','tối|mờ|xanh|trong',0,'Ban ngày thì sáng, ban đêm thì thế nào?'),
+  Q('nghia','Từ trái nghĩa với “nhanh” là từ nào?','chậm|mạnh|gấp|vội',0,'Con thỏ chạy nhanh, con rùa bò thế nào?'),
+  Q('nghia','Từ trái nghĩa với “vui” là từ nào?','buồn|cười|thích|khoẻ',0,'Khi được điểm tốt ta vui, khi mất đồ chơi ta thế nào?'),
+  Q('nghia','Từ trái nghĩa với “dài” là từ nào?','ngắn|to|cao|rộng',0,'Trái nghĩa là nghĩa ngược lại hẳn.'),
+  /* ── Từ đồng nghĩa (5) ── */
+  Q('nghia','Từ nào cùng nghĩa với “to”?','lớn|nhỏ|cao|nặng',0,'Cùng nghĩa là hai từ có nghĩa gần giống nhau.'),
+  Q('nghia','Từ nào cùng nghĩa với “mẹ”?','má|bố|bà|chị',0,'Ở miền Nam người ta gọi mẹ bằng từ này.'),
+  Q('nghia','Từ nào cùng nghĩa với “siêng năng”?','chăm chỉ|lười biếng|vui vẻ|nhanh nhẹn',0,'Người siêng năng là người hay làm việc, không lười.'),
+  Q('nghia','Từ nào cùng nghĩa với “học sinh”?','học trò|thầy giáo|hiệu trưởng|phụ huynh',0,'Cả hai từ đều chỉ người đi học.'),
+  Q('nghia','Từ nào cùng nghĩa với “xinh”?','đẹp|xấu|hiền|ngoan',0,'Cùng nghĩa là hai từ có nghĩa gần giống nhau.'),
+  /* ── Dấu câu (5) ── */
+  Q('daucau','Cuối câu kể ta dùng dấu gì?','dấu chấm|dấu chấm hỏi|dấu chấm than|dấu phẩy',0,'Câu kể là câu dùng để kể lại một việc.'),
+  Q('daucau','Cuối câu hỏi ta dùng dấu gì?','dấu chấm hỏi|dấu chấm|dấu chấm than|dấu hai chấm',0,'Câu hỏi là câu dùng để hỏi điều mình chưa biết.'),
+  Q('daucau','Câu “Ôi, đẹp quá” cuối câu nên dùng dấu gì?','dấu chấm than|dấu chấm hỏi|dấu phẩy|dấu hai chấm',0,'Đây là câu bộc lộ cảm xúc mạnh.'),
+  Q('daucau','Dấu nào dùng để ngăn cách các từ cùng loại trong một câu?','dấu phẩy|dấu chấm|dấu chấm hỏi|dấu chấm than',0,'Ví dụ: Em có bút, thước, vở và sách.'),
+  Q('daucau','Câu nào viết đúng?','Em đi học.|em đi học.|Em đi học|em đi học',0,'Đầu câu phải viết hoa và cuối câu kể phải có dấu chấm.'),
+  /* ── Bộ phận câu và kiểu câu (7) ── */
+  Q('cau','Câu “Bạn Lan đang đọc sách.” Bộ phận nào trả lời câu hỏi “Ai?”','Bạn Lan|đang đọc|đọc sách|sách',0,'Bạn hãy tìm từ chỉ người làm việc trong câu.'),
+  Q('cau','Câu “Bạn Lan đang đọc sách.” Bộ phận nào trả lời câu hỏi “Làm gì?”','đang đọc sách|Bạn Lan|Lan|sách',0,'Bạn hãy tìm phần nói về việc mà bạn Lan đang làm.'),
+  Q('cau','Câu “Con mèo rất đáng yêu.” Bộ phận nào trả lời câu hỏi “Thế nào?”','rất đáng yêu|Con mèo|mèo|con',0,'Bạn hãy tìm phần nói về đặc điểm của con mèo.'),
+  Q('cau','Câu nào là câu hỏi?','Bạn tên là gì?|Trời hôm nay rất đẹp.|Em đi học.|Ôi, vui quá!',0,'Câu hỏi dùng để hỏi và có dấu chấm hỏi ở cuối.'),
+  Q('cau','Câu nào là câu kể?','Trời hôm nay rất đẹp.|Bạn tên là gì?|Ôi, đẹp quá!|Bạn có khoẻ không?',0,'Câu kể dùng để kể lại một việc và có dấu chấm ở cuối.'),
+  Q('cau','Câu “Trên bàn có quyển sách.” Bộ phận nào trả lời câu hỏi “Ở đâu?”','Trên bàn|quyển sách|có|sách',0,'Bạn hãy tìm phần cho biết nơi chốn.'),
+  Q('cau','Câu “Sáng nay em đi học.” Bộ phận nào trả lời câu hỏi “Khi nào?”','Sáng nay|em|đi học|học',0,'Bạn hãy tìm phần cho biết thời gian.'),
+];
+
+BANK.anh = [
+  /* ── Chào hỏi và giao tiếp (8) ── */
+  Q('chao','Gặp bạn vào buổi sáng, người Anh nói câu nào?','Good morning|Good night|Goodbye|Thank you',0,'“Morning” nghĩa là buổi sáng.'),
+  Q('chao','“Xin chào” trong tiếng Anh là từ nào?','Hello|Sorry|Please|Yes',0,'Từ này bắt đầu bằng chữ H.'),
+  Q('chao','“Cảm ơn” trong tiếng Anh nói thế nào?','Thank you|Excuse me|See you|Good luck',0,'Có chữ “thank” nghĩa là cảm ơn.'),
+  Q('chao','“Tạm biệt” trong tiếng Anh là từ nào?','Goodbye|Hello|Good morning|Nice',0,'Trong từ này có chữ “bye”.'),
+  Q('chao','“Xin lỗi” trong tiếng Anh nói thế nào?','I am sorry|I am happy|I am fine|I am ten',0,'“Sorry” nghĩa là xin lỗi.'),
+  Q('chao','Bạn được hỏi “How are you?”. Bạn trả lời thế nào?','I am fine, thank you|My name is Nam|I am nine|Good night',0,'Câu này hỏi xem bạn có khoẻ không.'),
+  Q('chao','“Tên tôi là Nam” trong tiếng Anh nói thế nào?','My name is Nam|I am fine|This is Nam book|Nam is my school',0,'“My name is…” nghĩa là tên tôi là…'),
+  Q('chao','Trước khi đi ngủ, người Anh chúc nhau câu nào?','Good night|Good morning|Good afternoon|Good luck',0,'“Night” nghĩa là ban đêm.'),
+  /* ── Số đếm (7) ── */
+  Q('demso','Số 3 trong tiếng Anh là từ nào?','three|two|four|five',0,'Bạn hãy đọc: one, two, three.'),
+  Q('demso','Số 7 trong tiếng Anh là từ nào?','seven|six|eight|nine',0,'Bạn hãy đọc: five, six, seven.'),
+  Q('demso','“five” là số mấy?','5|4|9|15',0,'Bạn hãy đếm: one, two, three, four, five.'),
+  Q('demso','“ten” là số mấy?','10|2|3|12',0,'Đây là số cuối cùng khi đếm từ một đến mười.'),
+  Q('demso','Số 8 trong tiếng Anh là từ nào?','eight|eighty|nine|seven',0,'Bạn hãy đọc: six, seven, eight.'),
+  Q('demso','“twelve” là số mấy?','12|2|20|10',0,'Số này lớn hơn “ten” hai đơn vị.'),
+  Q('demso','Đếm tới “four” rồi thì số tiếp theo là từ nào?','five|three|six|two',0,'Bạn hãy đọc: three, four, rồi tới số nào?'),
+  /* ── Màu sắc (7) ── */
+  Q('mausac','Màu đỏ trong tiếng Anh là từ nào?','red|blue|green|black',0,'Từ này ngắn, bắt đầu bằng chữ r.'),
+  Q('mausac','Màu xanh lá cây trong tiếng Anh là từ nào?','green|blue|grey|brown',0,'Từ này bắt đầu bằng hai chữ “gr”.'),
+  Q('mausac','“yellow” là màu gì?','màu vàng|màu đỏ|màu tím|màu đen',0,'Quả chuối chín mang màu này.'),
+  Q('mausac','“blue” là màu gì?','màu xanh da trời|màu vàng|màu nâu|màu hồng',0,'Bầu trời lúc nắng mang màu này.'),
+  Q('mausac','Màu đen trong tiếng Anh là từ nào?','black|white|blue|brown',0,'Từ này bắt đầu bằng hai chữ “bl”.'),
+  Q('mausac','Màu trắng trong tiếng Anh là từ nào?','white|black|orange|purple',0,'Tờ giấy mới mang màu này, từ bắt đầu bằng chữ w.'),
+  Q('mausac','“orange” vừa là màu gì, vừa là quả gì?','màu cam và quả cam|màu tím và quả nho|màu đỏ và quả táo|màu vàng và quả chuối',0,'Từ này có nghĩa là cam.'),
+  /* ── Con vật (8) ── */
+  Q('convat','“con mèo” trong tiếng Anh là từ nào?','cat|dog|bird|fish',0,'Từ này có ba chữ cái, bắt đầu bằng chữ c.'),
+  Q('convat','“con chó” trong tiếng Anh là từ nào?','dog|cat|pig|cow',0,'Từ này có ba chữ cái, bắt đầu bằng chữ d.'),
+  Q('convat','“bird” là con gì?','con chim|con cá|con mèo|con gà',0,'Con vật này có cánh và biết bay.'),
+  Q('convat','“fish” là con gì?','con cá|con chim|con thỏ|con voi',0,'Con vật này sống dưới nước.'),
+  Q('convat','“con voi” trong tiếng Anh là từ nào?','elephant|rabbit|tiger|monkey',0,'Đây là từ dài nhất trong bốn từ.'),
+  Q('convat','“rabbit” là con gì?','con thỏ|con chuột|con gà|con bò',0,'Con vật tai dài, thích ăn cà rốt.'),
+  Q('convat','“con gà” trong tiếng Anh là từ nào?','chicken|duck|cow|horse',0,'Từ này bắt đầu bằng hai chữ “ch”.'),
+  Q('convat','“monkey” là con gì?','con khỉ|con hổ|con gấu|con ngựa',0,'Con vật này leo cây rất giỏi.'),
+  /* ── Đồ dùng học tập (8) ── */
+  Q('dodunghoc','“quyển sách” trong tiếng Anh là từ nào?','book|pen|bag|desk',0,'Từ này có bốn chữ cái, bắt đầu bằng chữ b.'),
+  Q('dodunghoc','“pen” là cái gì?','cây bút mực|quyển vở|cái bàn|cái ghế',0,'Đây là thứ ta cầm để viết.'),
+  Q('dodunghoc','“cái cặp sách” trong tiếng Anh là từ nào?','bag|book|ruler|chair',0,'Từ này có ba chữ cái, bắt đầu bằng chữ b.'),
+  Q('dodunghoc','“ruler” là cái gì?','cái thước|cục tẩy|cái kéo|quyển sách',0,'Đồ dùng để kẻ đường thẳng và đo độ dài.'),
+  Q('dodunghoc','“cái bàn học” trong tiếng Anh là từ nào?','desk|door|dog|book',0,'Từ này có bốn chữ cái, bắt đầu bằng chữ d.'),
+  Q('dodunghoc','“pencil” là cái gì?','cây bút chì|cây bút mực|cục tẩy|quyển vở',0,'Viết bằng thứ này thì tẩy đi được.'),
+  Q('dodunghoc','“cái ghế” trong tiếng Anh là từ nào?','chair|table|door|window',0,'Từ này bắt đầu bằng hai chữ “ch”.'),
+  Q('dodunghoc','“school” nghĩa là gì?','trường học|lớp học|thầy giáo|học sinh',0,'Đây là nơi có nhiều lớp học.'),
+  /* ── Gia đình và người quanh em (7) ── */
+  Q('giadinh','“mẹ” trong tiếng Anh là từ nào?','mother|father|sister|brother',0,'Từ này bắt đầu bằng chữ m, giống chữ đầu của từ “mẹ”.'),
+  Q('giadinh','“father” nghĩa là gì?','bố|mẹ|anh trai|ông',0,'Từ này bắt đầu bằng chữ f.'),
+  Q('giadinh','“anh trai hoặc em trai” trong tiếng Anh là từ nào?','brother|sister|mother|friend',0,'Từ này bắt đầu bằng hai chữ “br”.'),
+  Q('giadinh','“sister” nghĩa là gì?','chị gái hoặc em gái|anh trai|người bạn|cô giáo',0,'Từ này bắt đầu bằng chữ s.'),
+  Q('giadinh','“friend” nghĩa là gì?','người bạn|thầy giáo|em bé|người hàng xóm',0,'Đây là người cùng chơi và cùng học với bạn.'),
+  Q('giadinh','“family” nghĩa là gì?','gia đình|ngôi nhà|lớp học|bữa cơm',0,'Bố, mẹ và các con hợp lại thành cái này.'),
+  Q('giadinh','“cô giáo hoặc thầy giáo” trong tiếng Anh là từ nào?','teacher|student|doctor|driver',0,'Trong từ này có chữ “teach” nghĩa là dạy.'),
+  /* ── Đồ ăn và thức uống (8) ── */
+  Q('doan','“quả táo” trong tiếng Anh là từ nào?','apple|banana|orange|grape',0,'Từ này bắt đầu bằng chữ a.'),
+  Q('doan','“banana” là quả gì?','quả chuối|quả táo|quả cam|quả dưa',0,'Quả này dài, vỏ vàng, con khỉ rất thích.'),
+  Q('doan','“nước” trong tiếng Anh là từ nào?','water|milk|rice|bread',0,'Từ này bắt đầu bằng chữ w.'),
+  Q('doan','“milk” nghĩa là gì?','sữa|nước|cơm|bánh mì',0,'Thứ màu trắng, con bò cho ta thứ này.'),
+  Q('doan','“cơm” trong tiếng Anh là từ nào?','rice|bread|cake|egg',0,'Từ này có bốn chữ cái, bắt đầu bằng chữ r.'),
+  Q('doan','“bread” nghĩa là gì?','bánh mì|quả trứng|bánh ngọt|con cá',0,'Món ăn làm từ bột mì rồi đem nướng.'),
+  Q('doan','“quả trứng” trong tiếng Anh là từ nào?','egg|fish|milk|cake',0,'Từ này có ba chữ cái, bắt đầu bằng chữ e.'),
+  Q('doan','“cake” nghĩa là gì?','bánh ngọt|cơm|sữa|rau',0,'Món này thường có trong ngày sinh nhật.'),
+  /* ── Câu tiếng Anh đơn giản (7) ── */
+  Q('cauanh','Câu tiếng Anh nào viết đúng?','I am a student.|I are a student.|I is a student.|I be a student.',0,'Đi với “I” thì dùng “am”.'),
+  Q('cauanh','Câu tiếng Anh nào viết đúng?','This is my book.|This is my books.|This are my book.|This am my book.',0,'“This is…” dùng khi nói về một vật.'),
+  Q('cauanh','“Tôi chín tuổi” trong tiếng Anh nói thế nào?','I am nine years old.|I have nine years.|I am nine year.|I nine years old.',0,'Tiếng Anh nói tuổi theo mẫu “I am … years old”.'),
+  Q('cauanh','Câu tiếng Anh nào viết đúng?','She is my sister.|She are my sister.|She am my sister.|She be my sister.',0,'Đi với “she” thì dùng “is”.'),
+  Q('cauanh','Câu hỏi “What is your name?” hỏi điều gì?','Hỏi tên của bạn|Hỏi tuổi của bạn|Hỏi nhà của bạn|Hỏi lớp của bạn',0,'“Name” nghĩa là tên.'),
+  Q('cauanh','Câu tiếng Anh nào viết đúng?','I like cats.|I likes cats.|I liking cats.|I am like cats.',0,'Đi với “I” thì giữ nguyên động từ: like.'),
+  Q('cauanh','Chữ cái đầu tiên của bảng chữ cái tiếng Anh là chữ nào?','A|B|E|Z',0,'Bạn hãy đọc: A, B, C…'),
+];
+
+BANK.congnghe = [
+  /* ── An toàn khi dùng điện (10) ── */
+  Q('andien','Tay đang ướt thì có được cắm phích điện không?','Không được, phải lau khô tay trước|Được, nếu cắm thật nhanh|Được, nếu cắm bằng một tay|Được, vì nước không sao',0,'Nước dẫn điện, tay ướt chạm vào điện rất nguy hiểm.'),
+  Q('andien','Thấy dây điện bị hở, bạn nên làm gì?','Tránh xa và báo ngay cho người lớn|Lấy tay sờ thử xem sao|Tự lấy băng dính quấn lại|Lấy kéo cắt bỏ chỗ hở',0,'Việc sửa điện là việc của người lớn.'),
+  Q('andien','Có được chọc que hay đinh vào ổ điện không?','Không bao giờ được|Được, nếu que làm bằng gỗ|Được, nếu chỉ chọc một chút|Được, nếu có bạn đứng xem',0,'Ổ điện chỉ để cắm phích cắm, không cắm thứ gì khác.'),
+  Q('andien','Muốn rút phích cắm điện, bạn cầm vào đâu?','Cầm vào thân phích cắm|Kéo mạnh sợi dây điện|Cầm vào hai chân kim loại|Dùng răng cắn sợi dây',0,'Kéo dây sẽ làm đứt các sợi bên trong dây.'),
+  Q('andien','Trời mưa có sấm sét, bạn nên làm gì?','Vào trong nhà, không đứng dưới cây to|Đứng dưới cây to cho khỏi ướt|Cầm ô sắt chạy ngoài sân|Trèo lên cột điện trú mưa',0,'Sét hay đánh vào những chỗ cao ngoài trời.'),
+  Q('andien','Đồ điện đang cắm mà bốc khói, bạn làm gì trước tiên?','Tránh xa và gọi người lớn ngay|Đổ nước vào cho hết khói|Cầm lên xem thử|Bật thêm cho khói bay đi',0,'Với đồ điện, việc đầu tiên luôn là gọi người lớn.'),
+  Q('andien','Có được dội nước vào ổ điện cho sạch không?','Không được, nước gặp điện rất nguy hiểm|Được, nếu dùng thật ít nước|Được, nếu lau khô ngay sau đó|Được, nếu dùng nước ấm',0,'Nước dẫn điện nên tuyệt đối không để nước gần ổ điện.'),
+  Q('andien','Trước khi lau chiếc quạt điện, cần làm gì?','Rút phích cắm ra khỏi ổ điện|Bật quạt cho mát rồi lau|Nhờ bạn giữ cánh quạt lại|Không cần làm gì cả',0,'Ngắt điện xong rồi mới làm vệ sinh đồ điện.'),
+  Q('andien','Quạt đang quay, có được cho tay vào lồng quạt không?','Không được, cánh quạt quay rất nhanh|Được, nếu thò tay thật nhanh|Được, nếu quạt đang chạy số nhỏ|Được, nếu có đeo găng tay',0,'Cánh quạt đang quay có thể làm đau tay.'),
+  Q('andien','Ổ điện trong nhà nên đặt ở chỗ nào?','Chỗ cao, xa tầm với của em nhỏ|Sát mặt sàn nhà|Trong nhà tắm, gần vòi nước|Ngay cạnh bồn rửa bát',0,'Chỗ có nước và chỗ em bé với tới đều không an toàn.'),
+  /* ── Đồ dùng trong nhà (10) ── */
+  Q('dodungnha','Đồ dùng nào giúp giữ thức ăn tươi lâu?','Tủ lạnh|Cái quạt|Đèn học|Máy thu thanh',0,'Đồ dùng này làm lạnh phần bên trong.'),
+  Q('dodungnha','Đèn học dùng để làm gì?','Chiếu sáng chỗ ngồi học|Làm ấm căn phòng|Nghe nhạc|Làm mát căn phòng',0,'Tên gọi đã cho biết ta dùng nó khi nào.'),
+  Q('dodungnha','Quạt điện dùng để làm gì?','Làm mát|Nấu chín thức ăn|Giặt quần áo|Chiếu sáng',0,'Quạt quay thì tạo ra gió.'),
+  Q('dodungnha','Đồ dùng nào chỉ nghe được tiếng, không xem được hình?','Máy thu thanh|Máy thu hình|Máy tính bảng|Điện thoại thông minh',0,'“Thu thanh” nghĩa là thu tiếng.'),
+  Q('dodungnha','Máy thu hình (ti vi) cho ta những gì?','Có cả hình ảnh và tiếng nói|Chỉ có tiếng nói|Chỉ có chữ viết|Chỉ có hình vẽ',0,'Hai chữ “thu hình” cho biết máy này có hình.'),
+  Q('dodungnha','Nồi cơm điện dùng để làm gì?','Nấu chín cơm|Giữ lạnh thức ăn|Quạt cho mát|Chiếu sáng',0,'Tên gọi đã cho biết nó nấu món gì.'),
+  Q('dodungnha','Ngồi xem ti vi thế nào là đúng?','Ngồi xa màn hình và ngồi thẳng lưng|Ngồi sát ngay màn hình|Nằm dài dưới sàn nhà|Xem trong phòng tối om',0,'Ngồi gần quá thì mắt sẽ mỏi.'),
+  Q('dodungnha','Em viết bằng tay phải thì nên đặt đèn học ở phía nào?','Phía bên trái|Phía bên phải|Ngay sau lưng|Ngay trên đỉnh đầu',0,'Để đèn cùng bên tay viết thì bàn tay sẽ che mất ánh sáng.'),
+  Q('dodungnha','Bàn là (bàn ủi) dùng để làm gì?','Là phẳng quần áo|Giặt quần áo|Phơi khô quần áo|Gấp gọn quần áo',0,'Đồ dùng này nóng lên và làm phẳng vải.'),
+  Q('dodungnha','Đồ dùng nào KHÔNG dùng điện?','Cái chổi|Tủ lạnh|Quạt điện|Nồi cơm điện',0,'Bạn hãy tìm đồ dùng không cần cắm phích cắm.'),
+  /* ── Máy tính và thiết bị (10) ── */
+  Q('maytinh','Bộ phận nào của máy tính dùng để gõ chữ?','Bàn phím|Màn hình|Con chuột|Cái loa',0,'Bộ phận này có rất nhiều phím chữ cái.'),
+  Q('maytinh','Bộ phận nào của máy tính cho ta nhìn thấy hình?','Màn hình|Bàn phím|Con chuột|Máy in',0,'Bộ phận này trông giống một cái ti vi nhỏ.'),
+  Q('maytinh','Con chuột máy tính dùng để làm gì?','Di chuyển và nháy chọn trên màn hình|Gõ chữ|Phát ra tiếng|In ra giấy',0,'Ta cầm nó và rê trên mặt bàn.'),
+  Q('maytinh','Máy in dùng để làm gì?','In chữ và hình ra giấy|Chụp ảnh|Phát nhạc|Gõ chữ',0,'Tên gọi đã cho biết máy này làm việc gì.'),
+  Q('maytinh','Ngồi máy tính bao lâu thì nên nghỉ cho mắt một lần?','Khoảng 20 đến 30 phút|Khoảng 3 tiếng|Cả buổi cũng được|Không cần nghỉ',0,'Nhìn màn hình lâu quá thì mắt sẽ mỏi.'),
+  Q('maytinh','Mắt nên cách màn hình máy tính bao xa?','Khoảng một cánh tay|Sát ngay màn hình|Tận cuối phòng|Càng gần càng tốt',0,'Ngồi sát quá thì mắt sẽ mỏi và nhức.'),
+  Q('maytinh','Người lạ trên mạng hỏi địa chỉ nhà bạn. Bạn làm gì?','Không trả lời và kể ngay cho bố mẹ|Trả lời đầy đủ cho lịch sự|Cho luôn số điện thoại|Hẹn gặp người đó',0,'Chuyện về nhà mình chỉ nói với người trong nhà.'),
+  Q('maytinh','Có nên ăn uống ngay trên bàn phím máy tính không?','Không nên, nước đổ ra sẽ làm hỏng máy|Nên, nếu ăn thật gọn gàng|Nên, nếu uống bằng ống hút|Nên, nếu ăn thật nhanh',0,'Vụn bánh và nước làm hỏng bàn phím.'),
+  Q('maytinh','Khi dùng xong máy tính, ta nên làm gì?','Tắt máy đúng cách rồi mới ngắt điện|Rút phích điện ra ngay|Chỉ gập màn hình lại là xong|Bấm liên tục vào nút nguồn',0,'Tắt đúng cách giúp máy không bị hỏng bài đang làm.'),
+  Q('maytinh','Máy tính bảng và điện thoại thông minh giúp ta việc gì?','Học bài, tìm tin tức và liên lạc|Nấu chín thức ăn|Giặt sạch quần áo|Chiếu sáng cả căn phòng',0,'Bạn hãy nghĩ xem mọi người thường dùng chúng làm gì.'),
+  /* ── Dụng cụ và làm thủ công (10) ── */
+  Q('thucong','Đưa kéo cho bạn thì đưa thế nào là đúng?','Đưa phần cán, mũi nhọn quay về phía mình|Ném cho nhanh|Chĩa mũi nhọn về phía bạn|Để bạn tự giật lấy',0,'Mũi nhọn quay về phía mình thì bạn sẽ không bị đau.'),
+  Q('thucong','Cầm kéo đi trong lớp thế nào là an toàn?','Khép lưỡi kéo và cầm sát người|Vừa chạy vừa vung kéo|Cầm kéo đang mở ra|Chĩa mũi kéo về phía trước',0,'Kéo khép lại thì không cắt phải ai.'),
+  Q('thucong','Dụng cụ nào dùng để dán giấy?','Hồ dán|Cái kéo|Cái thước|Cái compa',0,'Thứ này dính, làm hai tờ giấy gắn vào nhau.'),
+  Q('thucong','Dụng cụ nào dùng để đo và kẻ đường thẳng?','Cái thước|Hồ dán|Cái kéo|Bút màu',0,'Dụng cụ này thẳng và có vạch chia.'),
+  Q('thucong','Trước khi làm thủ công, bạn nên làm gì?','Chuẩn bị đủ dụng cụ và vật liệu|Cứ làm rồi tìm sau|Chờ mượn của bạn|Chờ cô giáo làm hộ',0,'Chuẩn bị đủ thì làm sẽ không phải dừng giữa chừng.'),
+  Q('thucong','Làm thủ công xong, bạn nên làm gì?','Thu dọn và cất dụng cụ đúng chỗ|Bỏ đó rồi đi chơi|Để bạn khác dọn hộ|Vứt hết vào ngăn bàn',0,'Cất đúng chỗ thì lần sau tìm là thấy ngay.'),
+  Q('thucong','Giấy vụn sau khi cắt thì bỏ vào đâu?','Vào thùng rác|Xuống sàn nhà|Vào ngăn bàn|Ra ngoài cửa sổ',0,'Rác thì bỏ vào thùng rác.'),
+  Q('thucong','Dụng cụ nào dùng để vẽ hình tròn?','Cái compa|Cái thước thẳng|Cái kéo|Hồ dán',0,'Dụng cụ này có một chân nhọn và một chân cắm bút chì.'),
+  Q('thucong','Muốn gấp một chiếc thuyền, bạn cần vật liệu gì?','Một tờ giấy|Một cái nồi|Một cục pin|Một bóng đèn',0,'Thuyền giấy thì làm bằng giấy.'),
+  Q('thucong','Trong giờ thủ công, chưa hiểu cách làm thì nên làm gì?','Hỏi cô giáo hoặc người lớn|Ngồi im không làm gì|Làm bừa cho xong|Bỏ ra ngoài chơi',0,'Hỏi là cách nhanh nhất để hiểu bài.'),
+  /* ── Giữ gìn đồ dùng và tiết kiệm (10) ── */
+  Q('baoquan','Đọc sách xong, bạn nên làm gì?','Cất sách vào giá sách|Để sách dưới sàn nhà|Gấp mép trang cho dễ nhớ|Ném sách lên giường',0,'Cất đúng chỗ thì sách không bị rách.'),
+  Q('baoquan','Muốn quyển sách bền lâu, bạn nên làm gì?','Bọc bìa và rửa tay sạch trước khi đọc|Vẽ thêm vào sách|Vừa ăn vừa đọc|Để sách chỗ ẩm ướt',0,'Tay bẩn và nước làm hỏng giấy.'),
+  Q('baoquan','Gọt bút chì xong thì bạn để bút vào đâu?','Vào hộp bút|Vào túi quần|Trên sàn lớp|Thả rời trong cặp',0,'Hộp bút giữ cho ngòi bút không bị gãy.'),
+  Q('baoquan','Ra khỏi phòng, bạn nên làm gì với đèn và quạt?','Tắt đèn và tắt quạt|Bật to hơn|Cứ để nguyên|Bật thêm đèn nữa',0,'Tắt đi thì tiết kiệm được điện.'),
+  Q('baoquan','Đánh răng xong, bạn nên làm gì với vòi nước?','Khoá vòi nước lại|Để chảy cho mát|Mở to thêm|Để nhỏ giọt cũng được',0,'Nước sạch cần được tiết kiệm.'),
+  Q('baoquan','Tiết kiệm điện có ích lợi gì?','Đỡ tốn tiền và giữ gìn môi trường|Làm đèn sáng hơn|Làm quạt chạy nhanh hơn|Làm nhà mát hơn',0,'Điện không phải là thứ có vô tận.'),
+  Q('baoquan','Quần áo mặc xong nên để thế nào?','Gấp gọn hoặc treo lên|Vứt xuống sàn|Nhét dưới gầm giường|Để lẫn với đồ sạch',0,'Gấp gọn thì quần áo không bị nhàu.'),
+  Q('baoquan','Chơi đồ chơi xong thì bạn làm gì?','Xếp lại vào hộp|Để rải khắp nhà|Giấu dưới gối|Vứt ra ngoài sân',0,'Đồ để rải ra dễ bị giẫm vỡ và làm người khác ngã.'),
+  Q('baoquan','Cặp sách bị bẩn thì làm sạch thế nào?','Lau sạch rồi phơi cho khô|Ngâm cả cặp trong nước|Không lau bao giờ|Chà bằng bàn chải sắt',0,'Lau nhẹ rồi phơi khô thì cặp bền lâu.'),
+  Q('baoquan','Vì sao ta phải giữ gìn đồ dùng cẩn thận?','Để đồ dùng bền và dùng được lâu|Để đồ nhanh hỏng|Để phải mua đồ mới|Để đồ nặng hơn',0,'Đồ được giữ gìn kỹ thì lâu hỏng.'),
+  /* ── Tự nhiên hay do con người làm ra (10) ── */
+  Q('sanpham','Thứ nào do con người làm ra?','Cái bàn|Cái cây|Hòn đá|Con chim',0,'Bạn hãy tìm thứ được làm trong xưởng hoặc nhà máy.'),
+  Q('sanpham','Thứ nào có sẵn trong tự nhiên?','Dòng sông|Cái ti vi|Chiếc xe đạp|Cái quạt điện',0,'Bạn hãy tìm thứ không do ai chế tạo ra.'),
+  Q('sanpham','Cái ghế được làm ra để làm gì?','Để ngồi|Để ăn|Để mặc|Để uống',0,'Bạn hãy nghĩ xem ta dùng ghế khi nào.'),
+  Q('sanpham','Chiếc xe đạp giúp con người việc gì?','Đi lại|Nấu ăn|Chiếu sáng|Giặt đồ',0,'Xe đạp có bánh và chở người đi.'),
+  Q('sanpham','Ngôi nhà giúp con người việc gì?','Che nắng, che mưa và là nơi để ở|Để đi lại|Để nghe nhạc|Để nấu cơm nhanh',0,'Nhà là nơi mọi người sinh sống.'),
+  Q('sanpham','Thứ nào KHÔNG do con người làm ra?','Đám mây|Cái đèn|Cái cốc|Chiếc áo',0,'Bạn hãy tìm thứ ở trên trời.'),
+  Q('sanpham','Chiếc áo được làm chủ yếu từ vật liệu gì?','Vải|Sắt|Đá|Kính',0,'Bạn hãy sờ thử chiếc áo mình đang mặc.'),
+  Q('sanpham','Cái cốc thuỷ tinh có điều gì cần chú ý?','Dễ vỡ nên phải cầm cẩn thận|Không bao giờ vỡ|Rất mềm|Nhai được',0,'Thuỷ tinh cứng nhưng rơi xuống là vỡ.'),
+  Q('sanpham','Sản phẩm công nghệ là gì?','Là thứ con người làm ra để phục vụ đời sống|Là cây cối trong rừng|Là mưa và gió|Là các con vật',0,'Bốn chữ “con người làm ra” là ý chính.'),
+  Q('sanpham','Thứ nào dưới đây là sản phẩm công nghệ?','Chiếc đồng hồ|Ngọn núi|Cơn gió|Con cá',0,'Bạn hãy tìm thứ do con người chế tạo ra.'),
+];
+
+const SUBJECT = {
+  math:     { name:'Toán',        icon:'🔢', btn:''     },
+  viet:     { name:'Tiếng Việt',  icon:'📖', btn:'alt'  },
+  anh:      { name:'Tiếng Anh',   icon:'🔤', btn:'warm' },
+  congnghe: { name:'Công nghệ',   icon:'🔌', btn:'plum' },
+};
+const SUBJECT_KEYS = ['math','viet','anh','congnghe'];
+
+/* ═══════════════════════════════════════════════════════════════════════
+   3. NHẠC VÀ ÂM THANH (giữ nguyên engine của Game 01 / Game 02)
+   ═══════════════════════════════════════════════════════════════════════ */
+const MUSIC_VOL = 0.12;      // độ to nhạc nền (0 = tắt, 1 = to nhất)
+const BEAT = 0.28;           // độ dài 1 phách (giây) — nhỏ hơn = nhạc nhanh hơn
+
+let audioCtx = null, musicGain = null, sfxGain = null;
+let sfxOn = true, musicOn = true;
+let musicPlaying = false, musicNextAt = 0, musicTimer = null;
+
+function ensureCtx(){
+  if(audioCtx) return audioCtx;
+  try{
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    musicGain = audioCtx.createGain(); musicGain.gain.value = MUSIC_VOL; musicGain.connect(audioCtx.destination);
+    sfxGain   = audioCtx.createGain(); sfxGain.gain.value = 1;           sfxGain.connect(audioCtx.destination);
+  }catch(e){ audioCtx = null; }
+  return audioCtx;
+}
+const N = {
+  D4:293.66, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
+  C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00, B5:987.77, C6:1046.50,
+  C3:130.81, D3:146.83, F3:174.61, G3:196.00, A3:220.00,
+};
+function note(freq, at, dur, vol, type, dest){
+  if(!audioCtx || !freq) return;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type || 'sine';
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0, at);
+  g.gain.linearRampToValueAtTime(vol, at + 0.025);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g); g.connect(dest || sfxGain);
+  o.start(at); o.stop(at + dur + 0.04);
+}
+const MELODY = [
+  ['C5',1],['E5',1],['G5',1],['E5',1],
+  ['F5',1],['E5',1],['D5',2],
+  ['D5',1],['F5',1],['A5',1],['F5',1],
+  ['E5',1],['D5',1],['C5',2],
+  ['E5',1],['G5',1],['E5',1],['C5',1],
+  ['D5',1],['F5',1],['D5',1],['B4',1],
+  ['C5',1],['E5',1],['G5',1],['A5',1],
+  ['G5',2],[0,2],
+];
+const BASS = [['C3',4],['F3',4],['D3',4],['G3',4],['C3',4],['G3',4],['C3',4],['G3',4]];
+const LOOP_BEATS = MELODY.reduce(function(s,p){ return s + p[1]; }, 0);
+const LOOP_LEN = LOOP_BEATS * BEAT;
+
+function scheduleLoopAt(t0){
+  let t = t0;
+  MELODY.forEach(function(p){ if(p[0]) note(N[p[0]], t, p[1]*BEAT*0.92, 0.5, 'triangle', musicGain); t += p[1]*BEAT; });
+  t = t0;
+  BASS.forEach(function(p){ if(p[0]) note(N[p[0]], t, p[1]*BEAT*0.85, 0.4, 'sine', musicGain); t += p[1]*BEAT; });
+}
+// ⚠ setTimeout DUY NHẤT của game nằm ở phần nhạc — KHÔNG có đồng hồ đếm ngược nào.
+function musicTick(){
+  if(!musicPlaying || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  while(musicNextAt < now + 1.5){
+    scheduleLoopAt(Math.max(musicNextAt, now + 0.05));
+    musicNextAt = Math.max(musicNextAt, now + 0.05) + LOOP_LEN;
+  }
+  musicTimer = setTimeout(musicTick, 500);
+}
+function startMusic(){
+  if(!musicOn || musicPlaying || !ensureCtx()) return;
+  try{ audioCtx.resume(); }catch(e){}
+  musicPlaying = true; musicNextAt = audioCtx.currentTime + 0.1; musicTick();
+}
+function stopMusic(){
+  musicPlaying = false;
+  if(musicTimer){ clearTimeout(musicTimer); musicTimer = null; }
+  if(musicGain && audioCtx){
+    const t = audioCtx.currentTime;
+    musicGain.gain.cancelScheduledValues(t);
+    musicGain.gain.setTargetAtTime(0, t, 0.15);
+    setTimeout(function(){ if(!musicPlaying && musicGain) musicGain.gain.value = MUSIC_VOL; }, 900);
+  }
+}
+function duck(ms){
+  if(!musicGain || !audioCtx || !musicPlaying) return;
+  const t = audioCtx.currentTime;
+  musicGain.gain.cancelScheduledValues(t);
+  musicGain.gain.setTargetAtTime(MUSIC_VOL * 0.22, t, 0.06);
+  musicGain.gain.setTargetAtTime(MUSIC_VOL, t + (ms || 1400)/1000, 0.25);
+}
+/* Giọng đọc: dùng giọng tiếng Việt CÓ SẴN trong máy. Máy không có thì BỎ QUA phần đọc
+   (chữ vẫn hiện đủ), chứ không đọc tiếng Việt bằng giọng nước ngoài. */
+let viVoice = null;
+function loadVoices(){
+  try{
+    const vs = window.speechSynthesis.getVoices() || [];
+    viVoice = vs.find(function(v){ return /^vi\b|^vi-/i.test(v.lang || ''); })
+           || vs.find(function(v){ return /vietnam/i.test((v.name || '') + (v.lang || '')); }) || null;
+  }catch(e){ viVoice = null; }
+}
+if(typeof window !== 'undefined' && 'speechSynthesis' in window){
+  loadVoices();
+  try{ window.speechSynthesis.onvoiceschanged = loadVoices; }catch(e){}
+}
+function speak(text){
+  if(!sfxOn || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  if(!viVoice) return;
+  try{
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = viVoice; u.lang = viVoice.lang || 'vi-VN';
+    u.rate = 0.95; u.pitch = 1.12; u.volume = 1;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+/* ── Các tiếng trong game ── */
+const CHEERS = ['Đúng rồi! Bạn giỏi quá!', 'Chính xác! Tuyệt vời!', 'Đúng rồi! Bạn làm tốt lắm!'];
+let cheerIdx = 0;
+function playCorrect(){
+  if(!sfxOn || !ensureCtx()) return;
+  const t = audioCtx.currentTime + 0.02;
+  [['C5',0],['E5',0.09],['G5',0.18],['C6',0.27]].forEach(function(p){ note(N[p[0]], t+p[1], 0.32, 0.17, 'triangle'); });
+  note(N.G5, t + 0.44, 0.45, 0.09, 'sine');
+  duck(1800);
+  speak(CHEERS[cheerIdx++ % CHEERS.length]);
+}
+// CHƯA ĐÚNG: hai nốt đi xuống, mềm — KHÔNG phải tiếng còi báo lỗi
+function playWrong(){
+  if(!sfxOn || !ensureCtx()) return;
+  const t = audioCtx.currentTime + 0.02;
+  note(N.A4, t,        0.22, 0.12, 'triangle');
+  note(N.F4, t + 0.20, 0.34, 0.11, 'triangle');
+  duck(1100);
+  speak('Chưa đúng rồi.');
+}
+function playRoundStart(){
+  if(!sfxOn || !ensureCtx()) return;
+  const t = audioCtx.currentTime + 0.02;
+  note(N.G4, t, 0.2, 0.10, 'triangle'); note(N.C5, t + 0.16, 0.3, 0.10, 'triangle');
+}
+function playFinish(){
+  if(!sfxOn || !ensureCtx()) return;
+  const t = audioCtx.currentTime + 0.02;
+  [['C5',0],['E5',0.10],['G5',0.20],['C6',0.30],['G5',0.44],['C6',0.56]].forEach(function(p){
+    note(N[p[0]], t+p[1], 0.36, 0.16, 'triangle');
+  });
+  note(N.C6, t + 0.72, 0.9, 0.12, 'sine');
+  note(N.E5, t + 0.72, 0.9, 0.07, 'sine');
+  duck(2600);
+}
+/* ── Hai nút bật/tắt — hoạt động ĐỘC LẬP, máy nhớ lựa chọn ── */
+function setSoundLabel(){
+  document.getElementById('soundIcon').textContent = sfxOn ? '🔔' : '🔕';
+  document.getElementById('soundText').textContent = 'Âm thanh: ' + (sfxOn ? 'Bật' : 'Tắt');
+  document.getElementById('musicIcon').textContent = musicOn ? '🎵' : '🔇';
+  document.getElementById('musicText').textContent = 'Nhạc: ' + (musicOn ? 'Bật' : 'Tắt');
+}
+function toggleSound(){
+  sfxOn = !sfxOn;
+  try{ localStorage.setItem('tv_sound', sfxOn ? '1' : '0'); }catch(e){}
+  setSoundLabel();
+  if(sfxOn){ ensureCtx(); note(660, (audioCtx ? audioCtx.currentTime : 0) + 0.02, 0.18, 0.09, 'triangle'); }
+  else { try{ window.speechSynthesis.cancel(); }catch(e){} }
+}
+function toggleMusic(){
+  musicOn = !musicOn;
+  try{ localStorage.setItem('tv_music', musicOn ? '1' : '0'); }catch(e){}
+  setSoundLabel();
+  if(musicOn) startMusic(); else stopMusic();
+}
+(function initSound(){
+  try{
+    if(localStorage.getItem('tv_sound') === '0') sfxOn = false;
+    if(localStorage.getItem('tv_music') === '0') musicOn = false;
+  }catch(e){}
+  setSoundLabel();
+})();
+
+/* ═══════════════════════════════════════════════════════════════════════
+   4. LUẬT CHƠI VÀ TÍNH ĐIỂM
+   • Lượt 1: đúng ngay được 10 điểm. Chưa đúng thì BỎ QUA, đi tiếp câu sau.
+   • Xong 20 câu → quay lại các câu chưa đúng. Lượt 2 đúng được 8 điểm.
+   • Mỗi lượt sau lại bớt 2 điểm: 6 → 4 → 2 → 0. KHÔNG bao giờ xuống âm.
+   • Từ lượt 3 game mờ bớt đáp án sai, tới lượt điểm 0 thì chỉ luôn đáp án đúng
+     → bé không bao giờ bị kẹt trong vòng lặp không lối ra.
+   ═══════════════════════════════════════════════════════════════════════ */
+const ROUND_SIZE = 20;                                  // ⬅ số câu mỗi bài. Bé mau mệt thì đổi xuống 10.
+const pointsForRound = r => Math.max(0, 12 - 2 * r);    // lượt 1→10, 2→8, 3→6, 4→4, 5→2, từ 6→0
+
+let subject = 'math';    // 'math' | 'viet' | 'anh' | 'congnghe'
+let queue = [];          // các câu của lượt đang chạy
+let pending = [];        // các câu chưa đúng, để dành cho lượt sau
+let qi = 0;              // đang ở câu thứ mấy trong lượt
+let roundNo = 1;         // lượt thứ mấy
+let score = 0;
+let answered = false;    // đã chọn đáp án cho câu này chưa
+let firstTryCount = 0;   // số câu đúng ngay lần đầu
+let totalQ = 0;          // tổng số câu của bài (= ROUND_SIZE)
+
+function shuffle(a){
+  const r = a.slice();
+  for(let i = r.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = r[i]; r[i] = r[j]; r[j] = t;
+  }
+  return r;
+}
+/* Bốc 20 câu, ưu tiên câu bé CHƯA GẶP → 3 bài đầu đủ 60 câu khác nhau, không lặp */
+function pickQuestions(sub){
+  const bank = BANK[sub];
+  const key = 'tv_seen_' + sub;
+  let seen = [];
+  try{ seen = JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){ seen = []; }
+  if(!Array.isArray(seen)) seen = [];
+  let fresh = [];
+  for(let i = 0; i < bank.length; i++) if(seen.indexOf(i) < 0) fresh.push(i);
+  if(fresh.length < ROUND_SIZE){ seen = []; fresh = bank.map(function(_, i){ return i; }); }
+  const chosen = shuffle(fresh).slice(0, ROUND_SIZE);
+  try{ localStorage.setItem(key, JSON.stringify(seen.concat(chosen))); }catch(e){}
+  return chosen.map(function(i){ return { idx:i, q:bank[i], wrongs:0 }; });
+}
+function unseenCount(sub){
+  try{
+    const seen = JSON.parse(localStorage.getItem('tv_seen_' + sub) || '[]');
+    return BANK[sub].length - (Array.isArray(seen) ? seen.length : 0);
+  }catch(e){ return BANK[sub].length; }
+}
+/* Xáo vị trí 4 đáp án — để bé không đoán được đáp án đúng theo chỗ ngồi A/B/C/D */
+function shuffledOpts(item){
+  const q = item.q;
+  const pairs = q.opts.map(function(text, i){ return { text:text, right:(i === q.ans) }; });
+  return shuffle(pairs);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   5. MÀN HÌNH
+   ═══════════════════════════════════════════════════════════════════════ */
+function show(id){
+  ['screenStart','screenRound','screenPlay','screenEnd'].forEach(function(s){
+    document.getElementById(s).classList.toggle('hide', s !== id);
+  });
+  window.scrollTo(0, 0);
+}
+function renderStart(){
+  document.getElementById('heroStart').innerHTML = owl('happy');
+  document.getElementById('modeHint').textContent =
+    SUBJECT_KEYS.map(function(k){
+      return SUBJECT[k].name + ': còn ' + unseenCount(k) + '/' + BANK[k].length + ' câu bạn chưa gặp';
+    }).join(' · ') + '.';
+}
+
+function startRound(sub){
+  ensureCtx();
+  if(audioCtx){ try{ audioCtx.resume(); }catch(e){} }
+  startMusic();
+  subject = sub;
+  queue = pickQuestions(sub);
+  totalQ = queue.length;
+  pending = []; qi = 0; roundNo = 1; score = 0; firstTryCount = 0;
+  showQuestion();
+}
+
+/* Bảng báo trước mỗi lượt làm lại — bé BIẾT TRƯỚC điều gì sắp xảy ra */
+function showRoundNotice(){
+  const pts = pointsForRound(roundNo);
+  document.getElementById('roundPic').innerHTML = owl('soft');
+  document.getElementById('roundTitle').textContent =
+    roundNo === 2 ? 'Xong lượt đầu rồi!' : 'Mình cùng thử lại nhé!';
+  document.getElementById('roundText').textContent =
+    'Bây giờ mình quay lại ' + queue.length + ' câu bạn chưa trả lời đúng. '
+    + (pts > 0 ? 'Mỗi câu đúng ở lượt này được ' + pts + ' điểm.'
+               : 'Lượt này không còn điểm, nhưng mình sẽ chỉ đáp án đúng để bạn cùng làm cho xong.');
+  const rows = ['📌 Số câu cần làm lại: <b>' + queue.length + '</b>',
+                '⭐ Điểm hiện tại của bạn: <b>' + score + '</b>',
+                '🎯 Điểm mỗi câu đúng ở lượt này: <b>' + pts + '</b>'];
+  if(roundNo >= 3) rows.push('💡 Từ lượt này mình sẽ làm mờ bớt đáp án sai để bạn dễ chọn hơn.');
+  document.getElementById('roundList').innerHTML = rows.map(function(r){ return '<div>' + r + '</div>'; }).join('');
+  document.getElementById('roundGo').onclick = function(){ playRoundStart(); showQuestion(); };
+  show('screenRound');
+  document.getElementById('roundGo').focus();
+}
+
+function showQuestion(){
+  const item = queue[qi];
+  const q = item.q;
+  answered = false;
+
+  document.getElementById('chipQ').textContent = 'Câu ' + (qi + 1) + '/' + queue.length;
+  document.getElementById('chipS').textContent = '⭐ ' + score + ' điểm';
+  document.getElementById('chipR').textContent = roundNo === 1
+    ? 'Lượt 1 · mỗi câu đúng 10 điểm'
+    : 'Lượt ' + roundNo + ' · làm lại · mỗi câu đúng ' + pointsForRound(roundNo) + ' điểm';
+  document.getElementById('barFill').style.width = Math.round(qi / queue.length * 100) + '%';
+
+  document.getElementById('qIcon').innerHTML = ICON[q.topic] || owl();
+  document.getElementById('qTag').textContent = SUBJECT[subject].icon + ' ' + (TOPIC_NAME[q.topic] || '');
+  document.getElementById('qText').textContent = q.q;
+  document.getElementById('qSub').textContent = item.wrongs > 0
+    ? 'Bạn đã thử câu này ' + item.wrongs + ' lần. Cứ bình tĩnh nhé.' : '';
+
+  // mờ bớt đáp án sai từ lượt 3 để bé không bị kẹt
+  const opts = shuffledOpts(item);
+  const fadeCount = roundNo >= 5 ? 2 : (roundNo >= 3 ? 1 : 0);
+  const revealAns = (pointsForRound(roundNo) === 0);
+  let faded = 0;
+  const box = document.getElementById('optsBox');
+  box.innerHTML = '';
+  opts.forEach(function(o, i){
+    const b = document.createElement('button');
+    b.className = 'opt';
+    if(!o.right && faded < fadeCount){ b.classList.add('faded'); b.disabled = true; faded++; }
+    if(o.right && revealAns) b.classList.add('showans');
+    b.innerHTML = '<span class="letter">' + 'ABCD'[i] + '</span><span class="label">' + o.text + '</span>';
+    b.onclick = function(){ choose(o.right, b, opts); };
+    box.appendChild(b);
+  });
+
+  const f = document.getElementById('feedbackBox');
+  f.className = 'feedback hide'; f.innerHTML = '';
+  document.getElementById('nextBtn').classList.add('hide');
+  show('screenPlay');
+}
+
+function choose(isRight, btn, opts){
+  if(answered) return;
+  answered = true;
+  const item = queue[qi];
+  const buttons = Array.prototype.slice.call(document.getElementById('optsBox').children);
+  buttons.forEach(function(b){ b.disabled = true; });
+
+  const f = document.getElementById('feedbackBox');
+  const nb = document.getElementById('nextBtn');
+
+  if(isRight){
+    const pts = pointsForRound(roundNo);
+    score += pts;
+    if(roundNo === 1) firstTryCount++;
+    btn.classList.add('right');
+    f.className = 'feedback ok';
+    f.innerHTML = '🎉 Đúng rồi! <b>+' + pts + ' điểm</b>'
+      + '<span class="sub">Điểm của bạn: ' + score + '</span>';
+    playCorrect();
+    item.done = true;
+  } else {
+    item.wrongs++;
+    btn.classList.add('chosen-wrong');
+    // luôn chỉ ra đáp án đúng để bé HỌC ĐƯỢC, không chỉ biết mình sai
+    buttons.forEach(function(b, i){ if(opts[i].right) b.classList.add('right'); });
+    f.className = 'feedback no';
+    f.innerHTML = '💛 Chưa đúng rồi.'
+      + '<span class="sub">' + item.q.hint
+      + '<br>Mình sẽ quay lại câu này sau nhé — bạn vẫn còn cơ hội ghi điểm.</span>';
+    playWrong();
+    pending.push(item);
+  }
+  document.getElementById('chipS').textContent = '⭐ ' + score + ' điểm';
+  document.getElementById('barFill').style.width = Math.round((qi + 1) / queue.length * 100) + '%';
+  nb.textContent = (qi + 1 < queue.length) ? 'Câu tiếp theo →'
+                 : (pending.length ? 'Xem các câu cần làm lại →' : 'Xem kết quả →');
+  nb.classList.remove('hide');
+  nb.onclick = nextQuestion;
+  nb.focus();
+}
+
+function nextQuestion(){
+  qi++;
+  if(qi < queue.length){ showQuestion(); return; }
+  // hết một lượt
+  if(pending.length === 0){ endGame(); return; }
+  queue = pending; pending = []; qi = 0; roundNo++;
+  showRoundNotice();
+}
+
+function endGame(){
+  const max = totalQ * 10;
+  const pct = max ? score / max : 0;
+  const kind = pct >= 0.9 ? 'gold' : pct >= 0.7 ? 'silver' : pct >= 0.5 ? 'bronze' : 'star';
+  const label = kind === 'gold' ? '🥇 Huy chương Vàng'
+              : kind === 'silver' ? '🥈 Huy chương Bạc'
+              : kind === 'bronze' ? '🥉 Huy chương Đồng' : '🌟 Đã hoàn thành';
+  document.getElementById('endArt').innerHTML = medalArt(kind);
+  document.getElementById('endTitle').textContent = 'Chúc mừng bạn!';
+  document.getElementById('endScore').innerHTML = score + ' <small>/ ' + max + ' điểm</small>';
+  document.getElementById('endMedal').textContent = label;
+  document.getElementById('endText').textContent =
+    'Bạn đã làm xong cả ' + totalQ + ' câu ' + SUBJECT[subject].name + '. '
+    + (pct >= 0.9 ? 'Bạn làm rất tốt!'
+      : pct >= 0.7 ? 'Bạn làm tốt lắm!'
+      : pct >= 0.5 ? 'Bạn đã cố gắng rất nhiều!'
+      : 'Điều quan trọng là bạn đã làm xong hết. Lần sau mình cùng cố gắng thêm nhé.');
+  document.getElementById('endStats').innerHTML =
+      '<div class="stat"><b>' + firstTryCount + '</b>câu đúng ngay lần đầu</div>'
+    + '<div class="stat"><b>' + (totalQ - firstTryCount) + '</b>câu phải làm lại</div>'
+    + '<div class="stat"><b>' + roundNo + '</b>lượt đã chơi</div>';
+  /* Hai nút, luôn đúng hai nút — bé đã có bốn môn nên không xếp cả bốn ở đây cho rối.
+     Muốn đổi môn thì bấm nút thứ hai để về màn hình chọn môn quen thuộc. */
+  document.getElementById('endButtons').innerHTML =
+      '<button class="bigbtn ' + SUBJECT[subject].btn + '" id="againSame">🔄 Làm bài '
+    + SUBJECT[subject].name + ' khác</button>'
+    + '<button class="bigbtn ghost" id="goOther">📚 Chọn môn khác</button>';
+  document.getElementById('againSame').onclick = function(){ startRound(subject); };
+  document.getElementById('goOther').onclick = function(){ renderStart(); show('screenStart'); };
+  playFinish();
+  speak('Chúc mừng bạn! Bạn được ' + score + ' điểm.');
+  show('screenEnd');
+}
+
+/* Trình duyệt chỉ cho phát tiếng sau khi người dùng bấm/chạm — mở tiếng ở lần chạm đầu */
+function unlockAudio(){
+  ensureCtx();
+  if(audioCtx){ try{ audioCtx.resume(); }catch(e){} }
+}
+document.addEventListener('pointerdown', unlockAudio, { once:true });
+document.addEventListener('keydown', unlockAudio, { once:true });
+
+renderStart();
+show('screenStart');
+</script>
+</body>
+</html>
