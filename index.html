@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kỹ sư quy trình</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   KỸ SƯ QUY TRÌNH — Game 02
+   Bé sắp xếp các bước theo ĐÚNG THỨ TỰ để lắp robot / làm bánh / trồng cây.
+
+   Dựng trên nền Game 01 (Thám tử đọc hiểu) — giữ nguyên mọi nguyên tắc
+   thiết kế cho bé tự kỷ ~10 tuổi:
+   • Một file duy nhất, chạy offline, hình vẽ SVG nằm trong file
+   • Màu dịu, không nhấp nháy · KHÔNG tính giờ, không đếm ngược
+   • Hai nút tắt RIÊNG BIỆT: 🎵 nhạc nền · 🔔 tiếng khen + giọng đọc
+   • Bố cục cố định: mục tiêu ở trên, các thẻ bước ở dưới
+   • Luôn thấy còn bao nhiêu màn nữa
+   KHÁC Game 01 (khó hơn):
+   • Sắp thứ tự (khó hơn chọn A/B/C) · tới 8 bước một màn · 6 màn tăng dần
+   • Kéo-thả được, VÀ có nút ▲▼ cho bé khó điều khiển tay
+   ═══════════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#FBF6EE; --card:#FFFFFF; --ink:#2E3D50; --ink2:#5B6B80; --ink3:#8A99AC;
+  --line:#E6DFD3; --accent:#4B7BA8; --accent-soft:#E8F0F7;
+  --ok:#5B9E7E; --ok-soft:#E6F2EC; --hint:#C98A3C; --hint-soft:#FBF0DF;
+  --warn:#CE5540; --warn-soft:#FBEBE8;
+  --radius:18px; --shadow:0 2px 10px rgba(46,61,80,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  background:var(--bg); color:var(--ink);
+  font-size:19px; line-height:1.75; letter-spacing:.2px;
+  -webkit-font-smoothing:antialiased; padding:16px;
+  display:flex; flex-direction:column; align-items:center;
+}
+.wrap{width:100%; max-width:1080px; margin:auto}
+button{font-family:inherit; font-size:inherit; cursor:pointer; border:none; background:none; color:inherit}
+button:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
+.hide{display:none !important}
+
+/* ── Thanh trên: vị trí CỐ ĐỊNH ở mọi màn hình ── */
+.topbar{display:flex; align-items:center; gap:10px; margin-bottom:18px; flex-wrap:wrap}
+.topbar h1{font-size:20px; font-weight:800; letter-spacing:.3px; flex:1; min-width:180px}
+.iconbtn{
+  display:flex; align-items:center; gap:8px; background:var(--card); border:2px solid var(--line);
+  border-radius:999px; padding:8px 16px; font-size:15px; font-weight:700; color:var(--ink2); box-shadow:var(--shadow);
+}
+.iconbtn:hover{border-color:var(--accent); color:var(--accent)}
+
+.card{background:var(--card); border:2px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow)}
+
+/* ── Màn hình bắt đầu ── */
+.start{text-align:center; padding:40px 28px}
+.start h2{font-size:34px; font-weight:800; margin:16px 0 10px; letter-spacing:.3px}
+.start p{color:var(--ink2); max-width:560px; margin:0 auto 10px}
+.hero{max-width:230px; margin:0 auto}
+.hero svg{width:100%; height:auto; display:block}
+.bigbtn{
+  background:var(--accent); color:#fff; font-size:24px; font-weight:800;
+  padding:20px 52px; border-radius:999px; margin-top:24px; box-shadow:0 4px 0 #3B6389;
+}
+.bigbtn:hover{background:#3F6B94}
+.bigbtn:active{transform:translateY(2px); box-shadow:0 2px 0 #3B6389}
+.calmnote{
+  display:inline-block; margin-top:20px; background:var(--accent-soft); color:var(--accent);
+  border-radius:14px; padding:12px 20px; font-size:16px; line-height:1.6; font-weight:600;
+}
+.covers{display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin:26px 0 4px}
+.cover{width:132px; border:2px solid var(--line); border-radius:14px; padding:8px; background:#FDFBF7}
+.cover svg{width:100%; height:auto; display:block}
+.cover b{display:block; font-size:13px; font-weight:700; color:var(--ink2); margin-top:4px; line-height:1.4}
+.cover .lv{font-size:11px; color:var(--ink3); font-weight:700; letter-spacing:.5px}
+.cover.done{border-color:var(--ok); background:var(--ok-soft)}
+
+/* ── Màn chơi ── */
+.taskbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px}
+.lvtag{background:var(--accent-soft); color:var(--accent); font-size:14px; font-weight:800;
+  border-radius:999px; padding:5px 15px; white-space:nowrap}
+.steptag{background:var(--hint-soft); color:var(--hint); font-size:14px; font-weight:800;
+  border-radius:999px; padding:5px 15px; white-space:nowrap}
+.pics{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px}
+.pic{padding:10px 12px 12px}
+.pic-title{font-size:13px; font-weight:800; color:var(--ink3); letter-spacing:1px; text-transform:uppercase; margin-bottom:6px}
+.pic svg{width:100%; height:auto; max-height:210px; display:block}
+.pic .cap{font-size:14px; color:var(--ink2); min-height:1.75em; margin-top:4px; font-weight:600}
+.mission{background:var(--card); border:2px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:16px 20px; margin-bottom:14px; display:flex; gap:14px; align-items:flex-start}
+.mission .who{flex:0 0 62px}
+.mission .who svg{width:62px; height:auto; display:block}
+.mission p{font-size:20px; font-weight:700; line-height:1.6}
+.mission small{display:block; font-size:15px; font-weight:600; color:var(--ink2); margin-top:4px}
+
+/* ── Các thẻ bước ── */
+.steps{display:flex; flex-direction:column; gap:10px; padding:14px; }
+.step{
+  display:flex; align-items:center; gap:12px; background:#FDFBF7;
+  border:2px solid var(--line); border-radius:14px; padding:12px 14px;
+  touch-action:none; user-select:none; -webkit-user-select:none;
+  transition:border-color .15s, background .15s, box-shadow .15s;
+}
+.step:hover{border-color:var(--accent)}
+.step .num{
+  flex:0 0 40px; height:40px; border-radius:12px; background:var(--accent-soft); color:var(--accent);
+  display:flex; align-items:center; justify-content:center; font-weight:800; font-size:19px;
+}
+.step .txt{flex:1; font-size:19px; font-weight:600; line-height:1.5}
+.step .grip{flex:0 0 auto; color:var(--ink3); font-size:22px; cursor:grab; padding:0 4px; letter-spacing:2px}
+.step .arrows{display:flex; flex-direction:column; gap:3px; flex:0 0 auto}
+.step .arrows button{
+  width:38px; height:26px; border:2px solid var(--line); border-radius:8px; background:#fff;
+  color:var(--ink2); font-size:13px; line-height:1; display:flex; align-items:center; justify-content:center;
+}
+.step .arrows button:hover:not(:disabled){border-color:var(--accent); color:var(--accent)}
+.step .arrows button:disabled{opacity:.3; cursor:default}
+.step.dragging{
+  border-color:var(--accent); background:#fff; box-shadow:0 8px 20px rgba(46,61,80,.18);
+  z-index:5; position:relative; cursor:grabbing;
+}
+.step.bad{border-color:var(--warn); background:var(--warn-soft)}
+.step.bad .num{background:#F6D9D3; color:var(--warn)}
+.step.shake{animation:nudge .42s ease-in-out}
+@keyframes nudge{
+  0%,100%{transform:translateX(0)} 18%{transform:translateX(-5px)} 38%{transform:translateX(5px)}
+  58%{transform:translateX(-3px)} 78%{transform:translateX(3px)}
+}
+.step.good{border-color:var(--ok); background:var(--ok-soft)}
+.step.good .num{background:#CFE6DA; color:var(--ok)}
+.step.locked .grip,.step.locked .arrows{opacity:.25; pointer-events:none}
+.step.locked{cursor:default}
+.step.locked:hover{border-color:var(--ok)}
+
+.actions{display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:16px}
+.checkbtn{background:var(--ok); color:#fff; font-size:21px; font-weight:800; padding:15px 42px;
+  border-radius:999px; box-shadow:0 4px 0 #478065}
+.checkbtn:hover{background:#4F8C6F}
+.checkbtn:active{transform:translateY(2px); box-shadow:0 2px 0 #478065}
+.ghostbtn{background:var(--card); border:2px solid var(--line); color:var(--ink2); font-size:16px;
+  font-weight:700; padding:13px 24px; border-radius:999px}
+.ghostbtn:hover{border-color:var(--accent); color:var(--accent)}
+.nextbtn{background:var(--accent); color:#fff; font-size:21px; font-weight:800; padding:15px 42px;
+  border-radius:999px; box-shadow:0 4px 0 #3B6389}
+.nextbtn:hover{background:#3F6B94}
+.nextbtn:active{transform:translateY(2px); box-shadow:0 2px 0 #3B6389}
+
+.feedback{margin-top:14px; border-radius:14px; padding:14px 18px; font-size:18px; font-weight:700; line-height:1.6}
+.feedback.ok{background:var(--ok-soft); color:var(--ok)}
+.feedback.no{background:var(--warn-soft); color:var(--warn)}
+.feedback.tip{background:var(--hint-soft); color:var(--hint)}
+.feedback .sub{display:block; font-size:16px; font-weight:600; margin-top:6px}
+
+/* ── Tiến trình ── */
+.progress{margin-top:14px; padding:14px 18px}
+.progress-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+.progress-label{font-size:16px; font-weight:700; color:var(--ink2); flex:1; min-width:180px}
+.dots{display:flex; gap:8px}
+.dot{width:16px; height:16px; border-radius:50%; border:2px solid var(--line); background:#fff}
+.dot.done{background:var(--ok); border-color:var(--ok)}
+.dot.now{border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft)}
+
+/* ── Kết thúc ── */
+.end{text-align:center; padding:40px 28px}
+.end h2{font-size:32px; font-weight:800; margin:14px 0 10px}
+.endpic{max-width:250px; margin:0 auto}
+.endpic svg{width:100%; height:auto; display:block}
+.endlist{max-width:520px; margin:22px auto 0; text-align:left}
+.endlist div{background:var(--ok-soft); color:var(--ink); border-radius:12px; padding:10px 16px;
+  margin-bottom:8px; font-size:17px; font-weight:600}
+.endrow{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:24px}
+
+@media (max-width:720px){
+  body{font-size:18px; padding:12px}
+  .pics{grid-template-columns:1fr}
+  .pic svg{max-height:190px}
+  .step .txt{font-size:18px}
+  .start h2{font-size:28px}
+  .bigbtn{font-size:21px; padding:17px 38px}
+}
+/* Máy bật "giảm chuyển động" → bỏ hết hiệu ứng, kể cả rung nhẹ */
+@media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <h1>🔧 Kỹ sư quy trình</h1>
+    <button class="iconbtn" id="musicBtn" onclick="toggleMusic()" aria-label="Bật hoặc tắt nhạc nền">
+      <span id="musicIcon">🎵</span><span id="musicText">Nhạc: Bật</span>
+    </button>
+    <button class="iconbtn" id="soundBtn" onclick="toggleSound()" aria-label="Bật hoặc tắt tiếng khen và giọng đọc">
+      <span id="soundIcon">🔔</span><span id="soundText">Âm thanh: Bật</span>
+    </button>
+  </div>
+
+  <!-- ══ BẮT ĐẦU ══ -->
+  <div class="card start" id="screenStart">
+    <div class="hero" id="heroStart"></div>
+    <h2>Kỹ sư quy trình</h2>
+    <p>Chào bạn! Mình là Bác Bu-lông.</p>
+    <p>Mình có 6 việc cần làm, nhưng các bước bị lẫn lộn hết rồi.
+       Bạn hãy xếp lại đúng thứ tự giúp mình nhé.</p>
+    <div class="calmnote">
+      🕊️ Không tính giờ. Bạn cứ nghĩ thật kỹ.<br>
+      Xếp chưa đúng cũng không sao, mình sẽ chỉ chỗ cho bạn.
+    </div>
+    <div class="covers" id="coversBox"></div>
+    <button class="bigbtn" onclick="startGame()">▶️ Bắt đầu</button>
+    <div style="margin-top:16px;font-size:15px;color:var(--ink3);font-weight:600" id="startHint"></div>
+  </div>
+
+  <!-- ══ CHƠI ══ -->
+  <div id="screenPlay" class="hide">
+    <div class="taskbar">
+      <span class="lvtag" id="lvTag"></span>
+      <span class="steptag" id="stepTag"></span>
+    </div>
+
+    <div class="pics">
+      <div class="card pic">
+        <div class="pic-title">🎯 Mục tiêu</div>
+        <div id="picGoal"></div>
+        <div class="cap" id="capGoal"></div>
+      </div>
+      <div class="card pic">
+        <div class="pic-title">🔧 Của bạn</div>
+        <div id="picBuild"></div>
+        <div class="cap" id="capBuild"></div>
+      </div>
+    </div>
+
+    <div class="mission">
+      <div class="who" id="heroPlay"></div>
+      <div>
+        <p id="missionText"></p>
+        <small id="missionHow">Kéo thẻ để đổi chỗ, hoặc bấm ▲ ▼ ở bên phải thẻ.</small>
+      </div>
+    </div>
+
+    <div class="card steps" id="stepsBox"></div>
+
+    <div class="actions" id="actionsBox"></div>
+    <div class="feedback hide" id="feedbackBox" role="status" aria-live="polite"></div>
+
+    <div class="card progress">
+      <div class="progress-top">
+        <div class="progress-label" id="progressLabel"></div>
+        <div class="dots" id="dotsBox"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ KẾT THÚC ══ -->
+  <div class="card end hide" id="screenEnd">
+    <div class="endpic" id="endArt"></div>
+    <h2 id="endTitle">Hoàn thành xuất sắc!</h2>
+    <p id="endText" style="color:var(--ink2);max-width:560px;margin:0 auto"></p>
+    <div class="endlist" id="endList"></div>
+    <div class="endrow" id="endButtons"></div>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   1. HÌNH VẼ (SVG nằm ngay trong file — không có file ảnh rời)
+   Mỗi hình là một hàm art(n, total): vẽ ra trạng thái SAU KHI làm xong n bước.
+   Nhờ vậy cùng một hình dùng được cho cả "mục tiêu" (n = total)
+   và cho đoạn lắp ráp từng bước (n = 1, 2, 3…).
+   ═══════════════════════════════════════════════════════════════════════ */
+const sv = inner =>
+  '<svg viewBox="0 0 300 220" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Hình minh hoạ">'
+  + inner + '</svg>';
+
+const K = {
+  ink:'#2E3D50', line:'#DCD2C0', floor:'#EFE7DA', sky:'#E6F0F7',
+  metal:'#C9D6E2', metalD:'#9FB3C6', body:'#7FA8C9', bodyD:'#5E86A6',
+  red:'#CE5540', grn:'#5B9E7E', yel:'#E4B84D', lit:'#F2C14E',
+  soil:'#A9743F', soilD:'#8B5D31', grass:'#5B9E7E', grassD:'#478065',
+  wood:'#C89B6A', dough:'#F0E0BE', doughD:'#DCC79A', cream:'#FFF6E4',
+  cake:'#D9A566', cakeD:'#B9853F', plate:'#F4EFE6', oven:'#B7C3CE', ovenD:'#8D9AA6',
+};
+
+const floorLine = () =>
+  '<rect x="0" y="196" width="300" height="24" fill="'+K.floor+'"/>'
+  + '<line x1="0" y1="196" x2="300" y2="196" stroke="'+K.line+'" stroke-width="2"/>';
+
+const sparkles = () =>
+  '<g stroke="'+K.lit+'" stroke-width="3" stroke-linecap="round">'
+  + '<line x1="58" y1="58" x2="44" y2="50"/><line x1="56" y1="78" x2="40" y2="78"/><line x1="60" y1="98" x2="45" y2="106"/>'
+  + '<line x1="242" y1="58" x2="256" y2="50"/><line x1="244" y1="78" x2="260" y2="78"/><line x1="240" y1="98" x2="255" y2="106"/>'
+  + '</g>';
+
+/* ── ROBOT — 7 bước ────────────────────────────────────────────────────
+   1 chân · 2 thân · 3 đầu · 4 cánh tay · 5 ăng-ten · 6 bật đèn mắt · 7 khởi động */
+function robotArt(n, total){
+  const done = n >= total;                       // xong màn thì cho robot cười, dù màn chỉ có 3 bước
+  const lit  = n >= 6 || (done && n >= 3);
+  const smile= n >= 7 || (done && n >= 3);
+  let s = floorLine();
+  if(n >= 1)  s += '<rect x="124" y="146" width="18" height="42" rx="6" fill="'+K.metal+'"/>'
+                 + '<rect x="158" y="146" width="18" height="42" rx="6" fill="'+K.metal+'"/>'
+                 + '<rect x="114" y="183" width="32" height="14" rx="5" fill="'+K.ink+'"/>'
+                 + '<rect x="154" y="183" width="32" height="14" rx="5" fill="'+K.ink+'"/>';
+  if(n >= 2)  s += '<rect x="106" y="88" width="88" height="62" rx="16" fill="'+K.body+'"/>'
+                 + '<rect x="121" y="103" width="58" height="30" rx="9" fill="'+K.bodyD+'" opacity=".38"/>'
+                 + '<circle cx="136" cy="118" r="6" fill="'+K.red+'"/>'
+                 + '<circle cx="150" cy="118" r="6" fill="'+K.yel+'"/>'
+                 + '<circle cx="164" cy="118" r="6" fill="'+K.grn+'"/>';
+  if(n >= 3)  s += '<rect x="142" y="78" width="16" height="14" rx="4" fill="'+K.metalD+'"/>'
+                 + '<rect x="120" y="38" width="60" height="44" rx="14" fill="'+K.metal+'"/>';
+  if(n >= 4)  s += '<rect x="80" y="97" width="28" height="14" rx="7" fill="'+K.metal+'"/>'
+                 + '<circle cx="78" cy="104" r="10" fill="'+K.bodyD+'"/>'
+                 + '<rect x="192" y="97" width="28" height="14" rx="7" fill="'+K.metal+'"/>'
+                 + '<circle cx="222" cy="104" r="10" fill="'+K.bodyD+'"/>';
+  if(n >= 5)  s += '<line x1="150" y1="38" x2="150" y2="20" stroke="'+K.metalD+'" stroke-width="4" stroke-linecap="round"/>'
+                 + '<circle cx="150" cy="16" r="6" fill="'+K.red+'"/>';
+  if(n >= 3){                                    // mặt chỉ vẽ khi đã có đầu
+    if(lit) s += '<circle cx="136" cy="57" r="12" fill="'+K.lit+'" opacity=".22"/>'
+               + '<circle cx="164" cy="57" r="12" fill="'+K.lit+'" opacity=".22"/>';
+    s += '<circle cx="136" cy="57" r="7" fill="'+(lit ? K.lit : K.ink)+'"/>'
+       + '<circle cx="164" cy="57" r="7" fill="'+(lit ? K.lit : K.ink)+'"/>';
+    s += smile
+      ? '<path d="M138 70 q12 11 24 0" stroke="'+K.ink+'" stroke-width="3.5" fill="none" stroke-linecap="round"/>'
+      : '<line x1="140" y1="70" x2="160" y2="70" stroke="'+K.ink+'" stroke-width="3.5" stroke-linecap="round"/>';
+  }
+  if(smile && n >= 3) s += sparkles();
+  return sv(s);
+}
+
+/* ── TRỒNG CÂY — 5 bước ───────────────────────────────────────────────
+   1 đào hố · 2 đặt hạt · 3 lấp đất · 4 tưới nước · 5 nảy mầm */
+function treeArt(n, total){
+  const done = n >= total;
+  let s = '<rect x="0" y="0" width="300" height="164" fill="'+K.sky+'"/>'
+        + '<rect x="0" y="164" width="300" height="56" fill="'+K.soil+'"/>'
+        + '<line x1="0" y1="164" x2="300" y2="164" stroke="'+K.soilD+'" stroke-width="2"/>';
+  if(done) s += '<circle cx="248" cy="42" r="20" fill="'+K.lit+'"/>'
+              + '<g stroke="'+K.lit+'" stroke-width="3" stroke-linecap="round">'
+              + '<line x1="248" y1="12" x2="248" y2="4"/><line x1="278" y1="42" x2="288" y2="42"/>'
+              + '<line x1="270" y1="20" x2="277" y2="13"/><line x1="270" y1="64" x2="277" y2="71"/></g>';
+  if(n === 0){                                   // chưa làm gì: đất phẳng, chưa có hố
+    s += '<path d="M112 164 q10 -5 20 0 M156 164 q10 -5 20 0" stroke="'+K.soilD+'" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+  } else if(n <= 2){                             // hố còn hở
+    s += '<path d="M120 164 q30 42 60 0 Z" fill="'+K.soilD+'"/>';
+    s += '<path d="M104 158 l14 -10 l6 10 Z" fill="'+K.metalD+'"/>'      // lưỡi xẻng
+       + '<line x1="116" y1="150" x2="94" y2="118" stroke="'+K.wood+'" stroke-width="5" stroke-linecap="round"/>';
+    if(n >= 2) s += '<ellipse cx="150" cy="182" rx="7" ry="5" fill="#8A6A3A"/>'
+                  + '<ellipse cx="148" cy="180" rx="2.4" ry="1.6" fill="#C4A473"/>';
+  } else {                                       // đã lấp đất thành mô
+    s += '<path d="M116 164 q34 -20 68 0 Z" fill="'+K.soilD+'"/>';
+  }
+  if(n === 4)                                    // đúng lúc đang tưới
+    s += '<g transform="translate(214,104)">'
+       + '<rect x="-24" y="-14" width="42" height="30" rx="8" fill="'+K.body+'"/>'
+       + '<rect x="-14" y="-22" width="16" height="9" rx="4" fill="'+K.bodyD+'"/>'
+       + '<path d="M-24 -6 q-22 4 -26 20" stroke="'+K.bodyD+'" stroke-width="6" fill="none" stroke-linecap="round"/>'
+       + '<path d="M18 -8 q14 6 12 20" stroke="'+K.bodyD+'" stroke-width="5" fill="none" stroke-linecap="round"/>'
+       + '</g>'
+       + '<g fill="#7FB3D5"><ellipse cx="184" cy="132" rx="3.5" ry="6"/><ellipse cx="174" cy="146" rx="3.5" ry="6"/>'
+       + '<ellipse cx="192" cy="148" rx="3.5" ry="6"/><ellipse cx="180" cy="160" rx="3.5" ry="6"/></g>';
+  if(n >= 5)                                     // mầm cây
+    s += '<line x1="150" y1="156" x2="150" y2="112" stroke="'+K.grassD+'" stroke-width="5" stroke-linecap="round"/>'
+       + '<path d="M150 128 q-26 -6 -30 -24 q22 -3 30 24 Z" fill="'+K.grass+'"/>'
+       + '<path d="M150 120 q26 -8 32 -26 q-24 -2 -32 26 Z" fill="'+K.grass+'"/>'
+       + '<path d="M150 112 q-4 -14 4 -22 q8 10 -4 22 Z" fill="'+K.grassD+'"/>';
+  return sv(s);
+}
+
+/* ── LÀM BÁNH — 8 bước ────────────────────────────────────────────────
+   1 đổ bột · 2 đập trứng · 3 trộn · 4 rót vào khuôn · 5 vào lò
+   6 lấy bánh ra · 7 phết kem · 8 cắm nến */
+function cakeArt(n, total){
+  const done = n >= total;
+  let s = '<rect x="0" y="0" width="300" height="220" fill="#FDFBF7"/>' + floorLine();
+  if(n <= 3){                                    // giai đoạn trong bát
+    s += '<path d="M96 128 q54 42 108 0 Z" fill="'+K.plate+'"/>'
+       + '<path d="M96 128 q54 42 108 0" fill="none" stroke="'+K.line+'" stroke-width="3"/>'
+       + '<rect x="92" y="122" width="116" height="9" rx="4" fill="'+K.metal+'"/>';
+    if(n === 1 || n === 2) s += '<path d="M112 128 q38 24 76 0 Z" fill="'+K.dough+'"/>'
+                              + '<path d="M124 128 q26 -12 52 0" fill="none" stroke="'+K.doughD+'" stroke-width="3"/>';
+    if(n === 2)                                  // trứng đang rơi vào bát
+      s += '<path d="M138 84 q-14 -4 -12 -14 q10 -8 20 -2 Z" fill="'+K.cream+'" stroke="'+K.line+'" stroke-width="2"/>'
+         + '<path d="M162 84 q14 -4 12 -14 q-10 -8 -20 -2 Z" fill="'+K.cream+'" stroke="'+K.line+'" stroke-width="2"/>'
+         + '<ellipse cx="150" cy="102" rx="11" ry="9" fill="'+K.yel+'"/>';
+    if(n >= 3){
+      s += '<path d="M112 128 q38 26 76 0 Z" fill="'+K.doughD+'"/>'
+         + '<ellipse cx="150" cy="128" rx="38" ry="7" fill="'+K.dough+'"/>'
+         + '<line x1="176" y1="112" x2="196" y2="66" stroke="'+K.metalD+'" stroke-width="5" stroke-linecap="round"/>'
+         + '<path d="M170 118 q10 -12 12 -22 M176 120 q8 -14 8 -24" stroke="'+K.metal+'" stroke-width="3" fill="none" stroke-linecap="round"/>';
+    }
+  } else if(n === 4){                            // khuôn đã có bột
+    s += '<rect x="102" y="120" width="96" height="46" rx="8" fill="'+K.metal+'"/>'
+       + '<rect x="108" y="126" width="84" height="30" rx="5" fill="'+K.doughD+'"/>'
+       + '<rect x="94" y="114" width="112" height="10" rx="5" fill="'+K.metalD+'"/>';
+  } else if(n === 5){                            // trong lò, đang nướng
+    s += '<rect x="78" y="82" width="144" height="104" rx="12" fill="'+K.oven+'"/>'
+       + '<rect x="90" y="96" width="120" height="64" rx="8" fill="#5E6B78"/>'
+       + '<rect x="100" y="128" width="100" height="26" rx="5" fill="'+K.cake+'"/>'
+       + '<rect x="96" y="166" width="108" height="10" rx="5" fill="'+K.ovenD+'"/>'
+       + '<circle cx="204" cy="171" r="5" fill="'+K.red+'"/>'
+       + '<g stroke="'+K.lit+'" stroke-width="3" fill="none" stroke-linecap="round" opacity=".85">'
+       + '<path d="M124 76 q6 -12 0 -22"/><path d="M150 72 q6 -12 0 -22"/><path d="M176 76 q6 -12 0 -22"/></g>';
+  } else {                                       // 6, 7, 8 — bánh đã ra khỏi lò
+    s += '<ellipse cx="150" cy="182" rx="82" ry="12" fill="'+K.plate+'"/>'
+       + '<ellipse cx="150" cy="180" rx="82" ry="10" fill="none" stroke="'+K.line+'" stroke-width="2"/>'
+       + '<rect x="92" y="130" width="116" height="50" rx="8" fill="'+K.cake+'"/>'
+       + '<rect x="92" y="130" width="116" height="12" rx="6" fill="'+K.cakeD+'"/>';
+    if(n >= 7)
+      s += '<path d="M88 132 q16 -18 34 0 q16 -18 34 0 q16 -18 34 0 q10 8 -4 10 h-94 q-14 -2 -4 -10 Z" fill="'+K.cream+'"/>'
+         + '<path d="M88 132 q16 -18 34 0 q16 -18 34 0 q16 -18 34 0" fill="none" stroke="'+K.line+'" stroke-width="2"/>';
+    if(n >= 8)
+      s += '<rect x="146" y="88" width="9" height="30" rx="3" fill="'+K.red+'"/>'
+         + '<rect x="145" y="88" width="11" height="7" rx="3" fill="'+K.cream+'"/>'
+         + '<path d="M150 86 q-7 -8 0 -16 q7 8 0 16 Z" fill="'+K.lit+'"/>'
+         + '<circle cx="112" cy="122" r="7" fill="'+K.red+'"/><circle cx="188" cy="122" r="7" fill="'+K.red+'"/>';
+    if(done && n >= 8) s += sparkles();
+  }
+  return sv(s);
+}
+
+const ART = { robot:robotArt, tree:treeArt, cake:cakeArt };
+
+/* ── Bác Bu-lông — nhân vật dẫn chuyện, giữ NGUYÊN hình dáng ở mọi màn ── */
+function bolt(mood){
+  const happy = mood === 'happy', think = mood === 'think';
+  let s = '<svg viewBox="0 0 100 120" preserveAspectRatio="xMidYMid meet" aria-hidden="true">';
+  s += '<rect x="26" y="12" width="48" height="16" rx="6" fill="'+K.yel+'"/>';          // mũ công nhân
+  s += '<path d="M22 28 q28 -22 56 0 Z" fill="'+K.yel+'"/>';
+  s += '<rect x="18" y="26" width="64" height="7" rx="3.5" fill="#C29A34"/>';
+  s += '<rect x="28" y="33" width="44" height="40" rx="14" fill="'+K.metal+'"/>';       // đầu
+  s += '<circle cx="41" cy="50" r="5" fill="'+K.ink+'"/><circle cx="59" cy="50" r="5" fill="'+K.ink+'"/>';
+  s += happy
+    ? '<path d="M42 61 q8 8 16 0" stroke="'+K.ink+'" stroke-width="3" fill="none" stroke-linecap="round"/>'
+    : '<line x1="43" y1="62" x2="57" y2="62" stroke="'+K.ink+'" stroke-width="3" stroke-linecap="round"/>';
+  s += '<rect x="30" y="73" width="40" height="34" rx="10" fill="'+K.body+'"/>';        // thân
+  s += '<rect x="40" y="80" width="20" height="14" rx="5" fill="'+K.bodyD+'" opacity=".5"/>';
+  if(think) s += '<circle cx="82" cy="30" r="4" fill="'+K.accent+'" opacity=".5"/>'
+              + '<circle cx="90" cy="20" r="6" fill="'+K.accent+'" opacity=".35"/>';
+  if(happy) s += '<g stroke="'+K.lit+'" stroke-width="2.6" stroke-linecap="round">'
+              + '<line x1="16" y1="44" x2="8" y2="40"/><line x1="14" y1="56" x2="5" y2="56"/>'
+              + '<line x1="84" y1="44" x2="92" y2="40"/><line x1="86" y1="56" x2="95" y2="56"/></g>';
+  return s + '</svg>';
+}
+const ACC = '#4B7BA8';
+K.accent = ACC;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   2. NỘI DUNG — 6 MÀN, SỐ BƯỚC TĂNG DẦN 3 → 4 → 5 → 6 → 7 → 8
+   `steps` viết theo ĐÚNG THỨ TỰ. Game tự xáo trộn khi hiện ra.
+   Thứ tự các bước phải KHỚP với thứ tự bộ phận trong hàm vẽ ở trên.
+   ═══════════════════════════════════════════════════════════════════════ */
+const LEVELS = [
+  {
+    id:'robot3', theme:'robot', name:'Con robot nhỏ', goalName:'con robot nhỏ',
+    mission:'Hãy giúp tôi lắp ráp con robot này theo đúng thứ tự nhé!',
+    steps:['Lắp chân.', 'Gắn thân vào chân.', 'Nối đầu vào thân.'],
+    tip:'Con robot phải đứng được trước đã. Bộ phận nào chạm xuống đất?'
+  },
+  {
+    id:'robot4', theme:'robot', name:'Con robot có cánh tay', goalName:'con robot',
+    mission:'Hãy giúp tôi lắp ráp con robot này theo đúng thứ tự nhé!',
+    steps:['Lắp chân.', 'Gắn thân vào chân.', 'Nối đầu vào thân.', 'Lắp cánh tay.'],
+    tip:'Phải có thân rồi mới gắn được đầu và cánh tay vào thân.'
+  },
+  {
+    id:'tree5', theme:'tree', name:'Trồng một cái cây', goalName:'cây con',
+    mission:'Hãy giúp tôi trồng cái cây này theo đúng thứ tự nhé!',
+    steps:['Đào một cái hố.', 'Đặt hạt giống xuống hố.', 'Lấp đất lại.',
+           'Tưới nước cho hạt.', 'Hạt nảy mầm thành cây con.'],
+    tip:'Chưa có hố thì chưa đặt hạt xuống được đâu.'
+  },
+  {
+    id:'cake6', theme:'cake', name:'Làm một chiếc bánh', goalName:'chiếc bánh',
+    mission:'Hãy giúp tôi làm chiếc bánh này theo đúng thứ tự nhé!',
+    steps:['Đổ bột vào bát.', 'Đập trứng vào bát.', 'Trộn bột với trứng.',
+           'Rót bột vào khuôn.', 'Cho khuôn vào lò nướng.', 'Lấy bánh ra khỏi lò.'],
+    tip:'Trộn xong mới rót được. Muốn lấy bánh ra thì phải cho vào lò trước.'
+  },
+  {
+    id:'robot7', theme:'robot', name:'Robot biết khởi động', goalName:'con robot hoàn chỉnh',
+    mission:'Hãy giúp tôi lắp con robot này rồi cho nó khởi động nhé!',
+    steps:['Lắp chân.', 'Gắn thân vào chân.', 'Nối đầu vào thân.', 'Lắp cánh tay.',
+           'Gắn ăng-ten lên đầu.', 'Bật đèn ở hai mắt.', 'Bấm nút khởi động.'],
+    tip:'Lắp xong hết các bộ phận thì mới bật đèn và bấm nút khởi động được.'
+  },
+  {
+    id:'cake8', theme:'cake', name:'Bánh sinh nhật', goalName:'chiếc bánh sinh nhật',
+    mission:'Hãy giúp tôi làm chiếc bánh sinh nhật này theo đúng thứ tự nhé!',
+    steps:['Đổ bột vào bát.', 'Đập trứng vào bát.', 'Trộn bột với trứng.',
+           'Rót bột vào khuôn.', 'Cho khuôn vào lò nướng.', 'Lấy bánh ra khỏi lò.',
+           'Phết kem lên bánh.', 'Cắm nến lên bánh.'],
+    tip:'Bánh phải nướng xong và lấy ra khỏi lò thì mới phết kem được.'
+  },
+];
+
+/* ═══════════════════════════════════════════════════════════════════════
+   3. NHẠC VÀ ÂM THANH  (giữ nguyên engine của Game 01)
+   Hai nút tắt RIÊNG BIỆT: 🎵 nhạc nền · 🔔 tiếng khen + giọng đọc.
+   Âm lượng nhỏ, chỉ dùng sóng mềm (sine/triangle), mọi nốt vào êm và tắt dần.
+   Nhạc nền tự nhỏ lại khi có lời khen rồi tự to lại.
+   ═══════════════════════════════════════════════════════════════════════ */
+const MUSIC_VOL = 0.12;      // độ to nhạc nền (0 = tắt, 1 = to nhất)
+const BEAT = 0.28;           // độ dài 1 phách (giây) — nhỏ hơn = nhạc nhanh hơn
+
+let audioCtx = null, musicGain = null, sfxGain = null;
+let sfxOn = true, musicOn = true;
+let musicPlaying = false, musicNextAt = 0, musicTimer = null;
+
+function ensureCtx(){
+  if(audioCtx) return audioCtx;
+  try{
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    musicGain = audioCtx.createGain(); musicGain.gain.value = MUSIC_VOL; musicGain.connect(audioCtx.destination);
+    sfxGain   = audioCtx.createGain(); sfxGain.gain.value = 1;           sfxGain.connect(audioCtx.destination);
+  }catch(e){ audioCtx = null; }
+  return audioCtx;
+}
+
+const N = {
+  D4:293.66, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
+  C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00, B5:987.77, C6:1046.50,
+  C3:130.81, D3:146.83, F3:174.61, G3:196.00, A3:220.00,
+};
+
+function note(freq, at, dur, vol, type, dest){
+  if(!audioCtx || !freq) return;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type || 'sine';
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0, at);
+  g.gain.linearRampToValueAtTime(vol, at + 0.025);        // vào êm
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);  // tắt dần, không cắt cụt
+  o.connect(g); g.connect(dest || sfxGain);
+  o.start(at); o.stop(at + dur + 0.04);
+}
+
+/* Nhạc nền: nhịp đi đều như trong xưởng máy, vui và nhẹ (~9 giây/vòng) */
+const MELODY = [
+  ['G4',1],['C5',1],['E5',1],['C5',1],
+  ['D5',1],['G5',1],['E5',2],
+  ['F5',1],['E5',1],['D5',1],['C5',1],
+  ['D5',1],['E5',1],['C5',2],
+  ['E5',1],['G5',1],['A5',1],['G5',1],
+  ['F5',1],['E5',1],['D5',2],
+  ['C5',1],['E5',1],['G5',1],['C6',1],
+  ['G5',2],[0,2],
+];
+const BASS = [['C3',4],['G3',4],['F3',4],['C3',4],['A3',4],['F3',4],['G3',4],['C3',4]];
+const LOOP_BEATS = MELODY.reduce((s, p) => s + p[1], 0);
+const LOOP_LEN = LOOP_BEATS * BEAT;
+
+function scheduleLoopAt(t0){
+  let t = t0;
+  MELODY.forEach(function(p){
+    if(p[0]) note(N[p[0]], t, p[1] * BEAT * 0.92, 0.5, 'triangle', musicGain);
+    t += p[1] * BEAT;
+  });
+  t = t0;
+  BASS.forEach(function(p){
+    if(p[0]) note(N[p[0]], t, p[1] * BEAT * 0.85, 0.4, 'sine', musicGain);
+    t += p[1] * BEAT;
+  });
+}
+// Bộ lên lịch nhìn trước — nhạc chạy đều, không giật khi tab bận.
+// ⚠ Đây là setTimeout DUY NHẤT của phần nhạc; game KHÔNG có đồng hồ đếm ngược nào.
+function musicTick(){
+  if(!musicPlaying || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  while(musicNextAt < now + 1.5){
+    scheduleLoopAt(Math.max(musicNextAt, now + 0.05));
+    musicNextAt = Math.max(musicNextAt, now + 0.05) + LOOP_LEN;
+  }
+  musicTimer = setTimeout(musicTick, 500);
+}
+function startMusic(){
+  if(!musicOn || musicPlaying || !ensureCtx()) return;
+  try{ audioCtx.resume(); }catch(e){}
+  musicPlaying = true;
+  musicNextAt = audioCtx.currentTime + 0.1;
+  musicTick();
+}
+function stopMusic(){
+  musicPlaying = false;
+  if(musicTimer){ clearTimeout(musicTimer); musicTimer = null; }
+  if(musicGain && audioCtx){
+    const t = audioCtx.currentTime;                 // tắt dần chứ không cắt phựt
+    musicGain.gain.cancelScheduledValues(t);
+    musicGain.gain.setTargetAtTime(0, t, 0.15);
+    setTimeout(function(){ if(!musicPlaying && musicGain) musicGain.gain.value = MUSIC_VOL; }, 900);
+  }
+}
+function duck(ms){
+  if(!musicGain || !audioCtx || !musicPlaying) return;
+  const t = audioCtx.currentTime;
+  musicGain.gain.cancelScheduledValues(t);
+  musicGain.gain.setTargetAtTime(MUSIC_VOL * 0.22, t, 0.06);
+  musicGain.gain.setTargetAtTime(MUSIC_VOL, t + (ms || 1400) / 1000, 0.25);
+}
+
+/* Giọng đọc: dùng giọng tiếng Việt CÓ SẴN trong máy.
+   Máy không có giọng Việt thì BỎ QUA phần đọc (chữ vẫn hiện đủ trên màn hình)
+   — cố ý vậy, vì đọc tiếng Việt bằng giọng nước ngoài nghe sai, bé càng khó hiểu. */
+let viVoice = null;
+function loadVoices(){
+  try{
+    const vs = window.speechSynthesis.getVoices() || [];
+    viVoice = vs.find(function(v){ return /^vi\b|^vi-/i.test(v.lang || ''); })
+           || vs.find(function(v){ return /vietnam/i.test((v.name || '') + (v.lang || '')); }) || null;
+  }catch(e){ viVoice = null; }
+}
+if(typeof window !== 'undefined' && 'speechSynthesis' in window){
+  loadVoices();
+  try{ window.speechSynthesis.onvoiceschanged = loadVoices; }catch(e){}
+}
+function speak(text){
+  if(!sfxOn || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  if(!viVoice) return;
+  try{
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = viVoice; u.lang = viVoice.lang || 'vi-VN';
+    u.rate = 0.95; u.pitch = 1.12; u.volume = 1;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+/* ── Các tiếng trong game ── */
+// ĐÚNG RỒI: kèn đi lên + lời khen
+const CHEERS = ['Hoàn thành xuất sắc!', 'Đúng thứ tự rồi! Bạn giỏi quá!', 'Tuyệt vời! Bạn xếp đúng hết rồi!'];
+let cheerIdx = 0;
+function playCorrect(){
+  if(!sfxOn || !ensureCtx()) return;
+  const t = audioCtx.currentTime + 0.02;
+  [['C5',0],['E5',0.09],['G5',0.18],['C6',0.27]].forEach(function(p){ note(N[p[0]], t + p[1], 0.32, 0.17, 'triangle'); });
+  note(N.G5, t + 0.44, 0.45, 0.09, 'sine');
+  duck(1800);
+  speak(CHEERS[cheerIdx++ % CHEERS.length]);
+}
+// CHƯA ĐÚNG: "ố ồ" — hai nốt đi xuống, mềm, KHÔNG phải tiếng còi báo lỗi
+function playWrong(){
+  if(!sfxOn || !ensureCtx()) return;
+  const t = audioCtx.currentTime + 0.02;
+  note(N.A4, t,        0.22, 0.12, 'triangle');
+  note(N.F4, t + 0.20, 0.34, 0.11, 'triangle');
+  duck(1100);
+  speak('Ố ồ. Thử lại nhé.');
+}
+// Mỗi bước lắp xong: một tiếng "tách" mềm, cao dần theo bước
+const STEP_NOTES = ['C5','D5','E5','F5','G5','A5','B5','C6'];
+function playStep(i){
+  if(!sfxOn || !ensureCtx()) return;
+  const t = audioCtx.currentTime + 0.02;
+  note(N[STEP_NOTES[Math.min(i, STEP_NOTES.length - 1)]], t, 0.26, 0.13, 'triangle');
+  note(N.C3, t, 0.18, 0.05, 'sine');
+}
+// XONG CẢ 6 MÀN: kèn dài hơn + lời chúc mừng
+function playFinish(){
+  if(!sfxOn || !ensureCtx()) return;
+  const t = audioCtx.currentTime + 0.02;
+  [['C5',0],['E5',0.10],['G5',0.20],['C6',0.30],['G5',0.44],['C6',0.56]].forEach(function(p){
+    note(N[p[0]], t + p[1], 0.36, 0.16, 'triangle');
+  });
+  note(N.C6, t + 0.72, 0.9, 0.12, 'sine');
+  note(N.E5, t + 0.72, 0.9, 0.07, 'sine');
+  duck(2600);
+  speak('Chúc mừng bạn! Bạn là một kỹ sư quy trình tuyệt vời!');
+}
+
+/* ── Hai nút bật/tắt — hoạt động ĐỘC LẬP, máy nhớ lựa chọn ── */
+function setSoundLabel(){
+  document.getElementById('soundIcon').textContent = sfxOn ? '🔔' : '🔕';
+  document.getElementById('soundText').textContent = 'Âm thanh: ' + (sfxOn ? 'Bật' : 'Tắt');
+  document.getElementById('musicIcon').textContent = musicOn ? '🎵' : '🔇';
+  document.getElementById('musicText').textContent = 'Nhạc: ' + (musicOn ? 'Bật' : 'Tắt');
+}
+function toggleSound(){
+  sfxOn = !sfxOn;
+  try{ localStorage.setItem('kq_sound', sfxOn ? '1' : '0'); }catch(e){}
+  setSoundLabel();
+  if(sfxOn){ ensureCtx(); note(660, (audioCtx ? audioCtx.currentTime : 0) + 0.02, 0.18, 0.09, 'triangle'); }
+  else { try{ window.speechSynthesis.cancel(); }catch(e){} }
+}
+function toggleMusic(){
+  musicOn = !musicOn;
+  try{ localStorage.setItem('kq_music', musicOn ? '1' : '0'); }catch(e){}
+  setSoundLabel();
+  if(musicOn) startMusic(); else stopMusic();
+}
+(function initSound(){
+  try{
+    if(localStorage.getItem('kq_sound') === '0') sfxOn = false;
+    if(localStorage.getItem('kq_music') === '0') musicOn = false;
+  }catch(e){}
+  setSoundLabel();
+})();
+
+/* ═══════════════════════════════════════════════════════════════════════
+   4. TRẠNG THÁI VÀ XÁO TRỘN
+   ═══════════════════════════════════════════════════════════════════════ */
+let lvIdx = 0;          // đang ở màn thứ mấy
+let order = [];         // thứ tự các thẻ đang hiện: order[vị trí] = số thứ tự ĐÚNG của bước
+let locked = false;     // đã xếp đúng → khoá thẻ, không kéo được nữa
+let tries = 0;          // số lần bấm Kiểm tra ở màn này (chỉ để quyết định mức gợi ý)
+let animating = false;  // đang chạy đoạn lắp ráp
+
+const reduceMotion = (function(){
+  try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; }
+})();
+
+function shuffle(a){
+  const r = a.slice();
+  for(let i = r.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = r[i]; r[i] = r[j]; r[j] = t;
+  }
+  return r;
+}
+/* Xáo trộn nhưng KHÔNG được ra sẵn đáp án, và không được "gần đúng hết"
+   (không quá nửa số thẻ tình cờ nằm đúng chỗ) — để bé thật sự phải suy nghĩ. */
+function shuffleSteps(n){
+  const base = []; for(let i = 0; i < n; i++) base.push(i);
+  const maxAlready = Math.floor(n / 2);
+  for(let attempt = 0; attempt < 200; attempt++){
+    const s = shuffle(base);
+    let same = 0;
+    for(let i = 0; i < n; i++) if(s[i] === i) same++;
+    if(same === 0 || (same > 0 && same <= maxAlready)) return s;
+  }
+  // Bảo hiểm: đẩy vòng 1 bước → chắc chắn không thẻ nào đúng chỗ
+  return base.map(function(_, i){ return (i + 1) % n; });
+}
+
+function saveDone(id){
+  try{
+    const d = JSON.parse(localStorage.getItem('kq_done') || '[]');
+    if(d.indexOf(id) < 0){ d.push(id); localStorage.setItem('kq_done', JSON.stringify(d)); }
+  }catch(e){}
+}
+function doneList(){
+  try{ const d = JSON.parse(localStorage.getItem('kq_done') || '[]'); return Array.isArray(d) ? d : []; }
+  catch(e){ return []; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   5. MÀN HÌNH
+   ═══════════════════════════════════════════════════════════════════════ */
+function show(id){
+  ['screenStart','screenPlay','screenEnd'].forEach(function(s){
+    document.getElementById(s).classList.toggle('hide', s !== id);
+  });
+  window.scrollTo(0, 0);
+}
+
+function renderStart(){
+  document.getElementById('heroStart').innerHTML = bolt('think');
+  const done = doneList();
+  document.getElementById('coversBox').innerHTML = LEVELS.map(function(L, i){
+    const ok = done.indexOf(L.id) >= 0;
+    return '<div class="cover' + (ok ? ' done' : '') + '">'
+      + ART[L.theme](L.steps.length, L.steps.length)
+      + '<span class="lv">MÀN ' + (i + 1) + ' · ' + L.steps.length + ' BƯỚC</span>'
+      + '<b>' + L.name + (ok ? ' ✓' : '') + '</b></div>';
+  }).join('');
+  const n = done.length;
+  document.getElementById('startHint').textContent = n === 0
+    ? 'Có 6 màn, mỗi màn nhiều bước hơn màn trước: 3 → 4 → 5 → 6 → 7 → 8 bước.'
+    : 'Bạn đã hoàn thành ' + n + '/' + LEVELS.length + ' màn.';
+}
+
+function startGame(){
+  ensureCtx();
+  if(audioCtx){ try{ audioCtx.resume(); }catch(e){} }
+  startMusic();
+  lvIdx = 0;
+  openLevel();
+}
+
+function openLevel(){
+  const L = LEVELS[lvIdx];
+  locked = false; tries = 0; animating = false;
+  order = shuffleSteps(L.steps.length);
+
+  document.getElementById('lvTag').textContent = 'Màn ' + (lvIdx + 1) + '/' + LEVELS.length + ' · ' + L.name;
+  document.getElementById('stepTag').textContent = L.steps.length + ' bước';
+  document.getElementById('heroPlay').innerHTML = bolt('think');
+  document.getElementById('missionText').textContent = L.mission;
+  document.getElementById('missionHow').textContent = 'Kéo thẻ để đổi chỗ, hoặc bấm ▲ ▼ ở bên phải thẻ. Xếp xong thì bấm “Kiểm tra”.';
+
+  document.getElementById('picGoal').innerHTML = ART[L.theme](L.steps.length, L.steps.length);
+  document.getElementById('capGoal').textContent = 'Đây là ' + L.goalName + ' khi làm xong.';
+  setBuild(0);
+
+  renderSteps();
+  renderActions(false);
+  hideFeedback();
+  renderProgress();
+  show('screenPlay');
+}
+
+function setBuild(n){
+  const L = LEVELS[lvIdx];
+  document.getElementById('picBuild').innerHTML = ART[L.theme](n, L.steps.length);
+  document.getElementById('capBuild').textContent = n === 0
+    ? 'Chưa bắt đầu. Bạn xếp thứ tự trước nhé.'
+    : 'Bước ' + n + '/' + L.steps.length + ': ' + L.steps[n - 1];
+}
+
+function renderSteps(){
+  const L = LEVELS[lvIdx];
+  const box = document.getElementById('stepsBox');
+  box.innerHTML = order.map(function(s, pos){
+    return '<div class="step" data-s="' + s + '">'
+      + '<span class="num">' + (pos + 1) + '</span>'
+      + '<span class="txt">' + L.steps[s] + '</span>'
+      + '<span class="grip" aria-hidden="true">⋮⋮</span>'
+      + '<span class="arrows">'
+      +   '<button type="button" aria-label="Chuyển bước này lên trên" title="Lên trên">▲</button>'
+      +   '<button type="button" aria-label="Chuyển bước này xuống dưới" title="Xuống dưới">▼</button>'
+      + '</span></div>';
+  }).join('');
+  wireSteps();
+}
+
+/* Gắn sự kiện cho các thẻ: kéo-thả (chuột + cảm ứng) và hai nút ▲ ▼ */
+function wireSteps(){
+  const box = document.getElementById('stepsBox');
+  const cards = Array.prototype.slice.call(box.querySelectorAll('.step'));
+  cards.forEach(function(card, pos){
+    const btns = card.querySelectorAll('.arrows button');
+    btns[0].disabled = (pos === 0);
+    btns[1].disabled = (pos === cards.length - 1);
+    btns[0].onclick = function(e){ e.stopPropagation(); moveCard(pos, -1); };
+    btns[1].onclick = function(e){ e.stopPropagation(); moveCard(pos, 1); };
+    card.addEventListener('pointerdown', onDragStart);
+  });
+  refreshNums();
+}
+
+function moveCard(pos, dir){
+  if(locked || animating) return;
+  const to = pos + dir;
+  if(to < 0 || to >= order.length) return;
+  const t = order[pos]; order[pos] = order[to]; order[to] = t;
+  clearMarks();
+  renderSteps();
+  // giữ tiêu điểm ở đúng nút vừa bấm → bé bấm liên tiếp được, không phải tìm lại
+  const cards = document.getElementById('stepsBox').querySelectorAll('.step');
+  const btn = cards[to] && cards[to].querySelectorAll('.arrows button')[dir < 0 ? 0 : 1];
+  if(btn && !btn.disabled) btn.focus();
+  if(sfxOn && ensureCtx()) note(N.D5, audioCtx.currentTime + 0.01, 0.11, 0.06, 'sine');
+}
+
+function refreshNums(){
+  const cards = document.getElementById('stepsBox').querySelectorAll('.step');
+  for(let i = 0; i < cards.length; i++) cards[i].querySelector('.num').textContent = (i + 1);
+}
+
+/* ── Kéo-thả bằng Pointer Events: chạy được trên cả chuột, cảm ứng và bút ──
+   Cách làm: thẻ đang kéo được "nhấc" lên bằng transform theo ngón tay; khi tâm
+   thẻ vượt qua tâm thẻ bên cạnh thì đổi chỗ ngay trong danh sách, rồi chỉnh lại
+   mốc tính để thẻ vẫn nằm đúng dưới ngón tay (không bị nhảy giật). */
+let drag = null;
+
+function layoutTop(el){                 // vị trí thật của thẻ, bỏ qua transform
+  const keep = el.style.transform;
+  el.style.transform = 'none';
+  const y = el.getBoundingClientRect().top;
+  el.style.transform = keep;
+  return y;
+}
+
+function onDragStart(e){
+  if(locked || animating || drag) return;
+  if(e.target.closest('.arrows')) return;                 // bấm ▲▼ thì không kéo
+  if(e.pointerType === 'mouse' && e.button !== 0) return; // chỉ chuột trái
+  const card = e.currentTarget;
+  drag = { card:card, startY:e.clientY, id:e.pointerId, moved:false };
+  card.classList.add('dragging');
+  try{ card.setPointerCapture(e.pointerId); }catch(err){}
+  card.addEventListener('pointermove', onDragMove);
+  card.addEventListener('pointerup', onDragEnd);
+  card.addEventListener('pointercancel', onDragEnd);
+  clearMarks();
+}
+
+function onDragMove(e){
+  if(!drag || e.pointerId !== drag.id) return;
+  e.preventDefault();
+  const card = drag.card;
+  const box = document.getElementById('stepsBox');
+  let dy = e.clientY - drag.startY;
+  if(Math.abs(dy) > 3) drag.moved = true;
+  card.style.transform = 'translateY(' + dy + 'px)';
+
+  const baseTop = layoutTop(card);
+  const h = card.getBoundingClientRect().height;
+  const myMid = baseTop + dy + h / 2;
+  const sibs = Array.prototype.slice.call(box.querySelectorAll('.step')).filter(function(c){ return c !== card; });
+  for(let i = 0; i < sibs.length; i++){
+    const o = sibs[i];
+    const r = o.getBoundingClientRect();
+    // Ngưỡng đổi chỗ đặt ở 35% chiều cao thẻ bên cạnh, KHÔNG phải ở giữa thẻ:
+    // bé chỉ cần kéo hơn một phần ba thẻ là đổi được chỗ, thay vì phải kéo trọn
+    // một chiều cao thẻ. Nhẹ tay hơn hẳn cho bé khó điều khiển vận động.
+    const cardIsBefore = !!(card.compareDocumentPosition(o) & Node.DOCUMENT_POSITION_FOLLOWING);
+    const line = cardIsBefore ? (r.top + r.height * 0.35) : (r.bottom - r.height * 0.35);
+    let swapped = false;
+    if(cardIsBefore && myMid > line){ box.insertBefore(o, card); swapped = true; }
+    else if(!cardIsBefore && myMid < line){ box.insertBefore(card, o); swapped = true; }
+    if(swapped){
+      const nb = layoutTop(card);
+      drag.startY += (nb - baseTop);                       // giữ thẻ nằm đúng dưới ngón tay
+      card.style.transform = 'translateY(' + (e.clientY - drag.startY) + 'px)';
+      refreshNums();
+      if(sfxOn && ensureCtx()) note(N.G4, audioCtx.currentTime + 0.01, 0.09, 0.05, 'sine');
+      break;
+    }
+  }
+}
+
+function onDragEnd(e){
+  if(!drag) return;
+  const card = drag.card;
+  card.removeEventListener('pointermove', onDragMove);
+  card.removeEventListener('pointerup', onDragEnd);
+  card.removeEventListener('pointercancel', onDragEnd);
+  try{ card.releasePointerCapture(drag.id); }catch(err){}
+  card.style.transform = '';
+  card.classList.remove('dragging');
+  drag = null;
+  // đọc lại thứ tự từ giao diện về dữ liệu
+  const cards = document.getElementById('stepsBox').querySelectorAll('.step');
+  order = Array.prototype.map.call(cards, function(c){ return parseInt(c.getAttribute('data-s'), 10); });
+  renderSteps();
+}
+
+function renderActions(solved){
+  const box = document.getElementById('actionsBox');
+  if(solved){
+    const last = (lvIdx >= LEVELS.length - 1);
+    box.innerHTML = '<button class="nextbtn" id="goNext">'
+      + (last ? '🎉 Xem kết quả' : 'Màn tiếp theo →') + '</button>';
+    document.getElementById('goNext').onclick = nextLevel;
+  } else {
+    box.innerHTML = '<button class="checkbtn" id="doCheck">✓ Kiểm tra</button>'
+      + '<button class="ghostbtn" id="doReshuffle">🔄 Xếp lại từ đầu</button>';
+    document.getElementById('doCheck').onclick = check;
+    document.getElementById('doReshuffle').onclick = reshuffle;
+  }
+}
+
+function reshuffle(){
+  if(locked || animating) return;
+  order = shuffleSteps(LEVELS[lvIdx].steps.length);
+  clearMarks();
+  renderSteps();
+  hideFeedback();
+  setBuild(0);
+  if(sfxOn && ensureCtx()) note(N.C5, audioCtx.currentTime + 0.01, 0.14, 0.07, 'sine');
+}
+
+function clearMarks(){
+  const cards = document.getElementById('stepsBox').querySelectorAll('.step');
+  for(let i = 0; i < cards.length; i++) cards[i].classList.remove('bad', 'shake', 'good');
+}
+function hideFeedback(){
+  const f = document.getElementById('feedbackBox');
+  f.className = 'feedback hide';
+  f.innerHTML = '';
+}
+function setFeedback(kind, main, sub){
+  const f = document.getElementById('feedbackBox');
+  f.className = 'feedback ' + kind;
+  f.innerHTML = main + (sub ? '<span class="sub">' + sub + '</span>' : '');
+}
+
+/* ── KIỂM TRA ─────────────────────────────────────────────────────────── */
+function check(){
+  if(locked || animating) return;
+  const L = LEVELS[lvIdx];
+  const cards = document.getElementById('stepsBox').querySelectorAll('.step');
+  clearMarks();
+
+  let okCount = 0, firstWrong = -1;
+  for(let i = 0; i < order.length; i++){
+    if(order[i] === i){ okCount++; }
+    else if(firstWrong < 0){ firstWrong = i; }
+  }
+
+  if(okCount === order.length){        // ─── ĐÚNG HẾT ───
+    locked = true;
+    for(let i = 0; i < cards.length; i++) cards[i].classList.add('good', 'locked');
+    runAssembly();
+    return;
+  }
+
+  // ─── CHƯA ĐÚNG ─── thẻ nằm sai chỗ: rung nhẹ + viền đỏ
+  tries++;
+  for(let i = 0; i < cards.length; i++){
+    if(order[i] !== i){
+      cards[i].classList.add('bad');
+      if(!reduceMotion){
+        cards[i].classList.remove('shake');
+        void cards[i].offsetWidth;      // ép trình duyệt chạy lại hiệu ứng
+        cards[i].classList.add('shake');
+      }
+    }
+  }
+  playWrong();
+  const sub = 'Bạn đã đặt đúng ' + okCount + '/' + order.length + ' bước.'
+    + (tries >= 2 && firstWrong >= 0
+        ? ' 💡 Bước thứ ' + (firstWrong + 1) + ' phải là: “' + L.steps[firstWrong] + '”'
+        : '')
+    + (tries >= 3 ? ' 💡 ' + L.tip : '');
+  setFeedback('no', 'Có vẻ sai rồi. Hãy thử lại xem bước nào cần làm trước nhé!', sub);
+  document.getElementById('heroPlay').innerHTML = bolt('think');
+}
+
+/* ── Đoạn lắp ráp khi xếp đúng: hiện dần từng bước ───────────────────────
+   ⚠ setTimeout ở đây CHỈ để hiện hình lần lượt cho bé xem, KHÔNG phải đếm ngược,
+   không giới hạn thời gian chơi. Máy bật "giảm chuyển động" thì hiện luôn kết quả. */
+function runAssembly(){
+  const L = LEVELS[lvIdx];
+  const total = L.steps.length;
+  setFeedback('tip', '🔧 Đang lắp theo đúng thứ tự bạn xếp…', '');
+  if(reduceMotion){
+    setBuild(total);
+    finishLevel();
+    return;
+  }
+  animating = true;
+  let s = 0;
+  const tick = function(){
+    s++;
+    setBuild(s);
+    playStep(s - 1);
+    const cards = document.getElementById('stepsBox').querySelectorAll('.step');
+    for(let i = 0; i < cards.length; i++) cards[i].style.opacity = (i < s ? '1' : '0.45');
+    if(s < total) setTimeout(tick, 750);
+    else setTimeout(function(){
+      const cs = document.getElementById('stepsBox').querySelectorAll('.step');
+      for(let i = 0; i < cs.length; i++) cs[i].style.opacity = '1';
+      animating = false;
+      finishLevel();
+    }, 700);
+  };
+  setTimeout(tick, 350);
+}
+
+function finishLevel(){
+  const L = LEVELS[lvIdx];
+  saveDone(L.id);
+  document.getElementById('heroPlay').innerHTML = bolt('happy');
+  setFeedback('ok', '🎉 Hoàn thành xuất sắc!',
+    'Bạn đã xếp đúng cả ' + L.steps.length + ' bước để làm ra ' + L.goalName + '.');
+  playCorrect();
+  renderActions(true);
+  renderProgress();
+  const b = document.getElementById('goNext');
+  if(b) b.focus();
+}
+
+function nextLevel(){
+  if(lvIdx >= LEVELS.length - 1){ endGame(); return; }
+  lvIdx++;
+  openLevel();
+}
+
+function renderProgress(){
+  const done = doneList();
+  document.getElementById('progressLabel').textContent =
+    'Bạn đang ở màn ' + (lvIdx + 1) + ' trong ' + LEVELS.length + ' màn.';
+  document.getElementById('dotsBox').innerHTML = LEVELS.map(function(L, i){
+    const cls = 'dot' + (done.indexOf(L.id) >= 0 ? ' done' : '') + (i === lvIdx ? ' now' : '');
+    return '<span class="' + cls + '" title="Màn ' + (i + 1) + ': ' + L.name + '"></span>';
+  }).join('');
+}
+
+function endGame(){
+  document.getElementById('endArt').innerHTML = bolt('happy');
+  document.getElementById('endTitle').textContent = 'Chúc mừng bạn!';
+  document.getElementById('endText').textContent =
+    'Bạn đã xếp đúng thứ tự cho cả ' + LEVELS.length + ' việc. Bạn là một kỹ sư quy trình tuyệt vời!';
+  document.getElementById('endList').innerHTML = LEVELS.map(function(L, i){
+    return '<div>✓ Màn ' + (i + 1) + ' — ' + L.name + ' (' + L.steps.length + ' bước)</div>';
+  }).join('');
+  document.getElementById('endButtons').innerHTML =
+    '<button class="bigbtn" id="again">🔄 Chơi lại từ màn 1</button>';
+  document.getElementById('again').onclick = function(){ lvIdx = 0; openLevel(); };
+  playFinish();
+  show('screenEnd');
+}
+
+/* Trình duyệt chỉ cho phát tiếng sau khi người dùng bấm/chạm — mở tiếng ở lần chạm đầu */
+function unlockAudio(){
+  ensureCtx();
+  if(audioCtx){ try{ audioCtx.resume(); }catch(e){} }
+}
+document.addEventListener('pointerdown', unlockAudio, { once:true });
+document.addEventListener('keydown', unlockAudio, { once:true });
+
+renderStart();
+show('screenStart');
+</script>
+</body>
+</html>
