@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thám tử đọc hiểu</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   THÁM TỬ ĐỌC HIỂU — game đọc hiểu cho bé ~10 tuổi
+   Thiết kế riêng cho bé tự kỷ:
+   • Mỗi đoạn truyện có MỘT HÌNH MINH HOẠ · đáp án cũng có hình
+   • Màu dịu, không nhấp nháy, không hiệu ứng mạnh
+   • KHÔNG tính giờ → bé đọc bao lâu tùy thích
+   • Trả lời sai KHÔNG bị phạt, không dấu X đỏ → chỉ gợi ý nhẹ nhàng
+   • Bố cục cố định: hình + đoạn văn bên trái, câu hỏi bên phải
+   • Luôn thấy còn bao nhiêu gợi ý nữa → bé biết trước điều sắp xảy ra
+   • Bật/tắt âm thanh dễ dàng (nhiều bé nhạy cảm với tiếng động)
+   ═══════════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#FBF6EE; --card:#FFFFFF; --ink:#2E3D50; --ink2:#5B6B80; --ink3:#8A99AC;
+  --line:#E6DFD3; --accent:#4B7BA8; --accent-soft:#E8F0F7;
+  --ok:#5B9E7E; --ok-soft:#E6F2EC; --hint:#C98A3C; --hint-soft:#FBF0DF;
+  --radius:18px; --shadow:0 2px 10px rgba(46,61,80,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  background:var(--bg); color:var(--ink);
+  font-size:19px; line-height:1.75; letter-spacing:.2px;
+  -webkit-font-smoothing:antialiased; padding:16px;
+  display:flex; flex-direction:column; align-items:center;
+}
+.wrap{width:100%; max-width:1080px; margin:auto}
+button{font-family:inherit; font-size:inherit; cursor:pointer; border:none; background:none; color:inherit}
+button:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
+
+/* ── Thanh trên: vị trí CỐ ĐỊNH ở mọi màn hình ── */
+.topbar{display:flex; align-items:center; gap:10px; margin-bottom:18px; flex-wrap:wrap}
+.topbar h1{font-size:20px; font-weight:800; letter-spacing:.3px; flex:1; min-width:180px}
+.iconbtn{
+  display:flex; align-items:center; gap:8px; background:var(--card); border:2px solid var(--line);
+  border-radius:999px; padding:8px 16px; font-size:15px; font-weight:700; color:var(--ink2); box-shadow:var(--shadow);
+}
+.iconbtn:hover{border-color:var(--accent); color:var(--accent)}
+
+.card{background:var(--card); border:2px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow)}
+
+/* ── Màn hình bắt đầu ── */
+.start{text-align:center; padding:40px 28px}
+.start h2{font-size:34px; font-weight:800; margin:16px 0 10px; letter-spacing:.3px}
+.start p{color:var(--ink2); max-width:520px; margin:0 auto 10px}
+.bigbtn{
+  background:var(--accent); color:#fff; font-size:24px; font-weight:800;
+  padding:20px 52px; border-radius:999px; margin-top:24px; box-shadow:0 4px 0 #3B6389;
+}
+.bigbtn:hover{background:#3F6B94}
+.bigbtn:active{transform:translateY(2px); box-shadow:0 2px 0 #3B6389}
+.calmnote{
+  display:inline-block; margin-top:20px; background:var(--accent-soft); color:var(--accent);
+  border-radius:14px; padding:12px 20px; font-size:16px; font-weight:600;
+}
+.modes{display:flex; gap:14px; justify-content:center; flex-wrap:wrap}
+.bigbtn.alt{background:var(--ok); box-shadow:0 4px 0 #4A836A}
+.bigbtn.alt:hover{background:#4F8C6F}
+.bigbtn.alt:active{box-shadow:0 2px 0 #4A836A}
+.modehint{font-size:15px; color:var(--ink3); margin-top:14px; line-height:1.7}
+/* Ảnh bìa 2 vụ án ở màn hình đầu — bé nhìn hình là biết sắp chơi gì */
+.covers{display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:24px}
+.cover{width:180px}
+.cover .pic{width:100%; height:120px; background:#F4EFE6; border:2px solid var(--line); border-radius:14px; overflow:hidden}
+.cover .cap{font-size:14.5px; font-weight:700; color:var(--ink2); margin-top:7px}
+
+.hero{width:126px; height:126px; margin:0 auto}
+.hero-sm{width:70px; height:70px; flex:none}
+
+/* ── Khu chơi: TRÁI = hình + đoạn văn · PHẢI = câu hỏi ── */
+.play{display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start}
+.panel{padding:22px 24px}
+.panel-title{
+  display:flex; align-items:center; gap:9px; font-size:15px; font-weight:800;
+  color:var(--ink3); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;
+}
+/* Hình minh hoạ của đoạn truyện đang đọc */
+.scenepic{
+  width:100%; height:200px; background:#F4EFE6; border:2px solid var(--line);
+  border-radius:14px; margin-bottom:16px; overflow:hidden;
+}
+.scenepic svg{display:block; width:100%; height:100%}
+.story p{margin-bottom:14px}
+.story p:last-child{margin-bottom:0}
+.story .s{border-radius:6px; padding:2px 3px; margin:0 -3px; transition:background .45s ease}
+.story .s.lit{background:#FCEFD4; box-shadow:0 0 0 2px #F2DCAE}
+.newtag{
+  display:inline-block; background:var(--accent-soft); color:var(--accent); font-size:13px;
+  font-weight:800; border-radius:8px; padding:1px 9px; margin-right:8px; vertical-align:2px;
+}
+.question{font-size:22px; font-weight:800; line-height:1.55; margin-bottom:18px}
+
+/* ── Đáp án (có hình + chữ) ── */
+.opts{display:flex; flex-direction:column; gap:12px}
+.opt{
+  display:flex; align-items:center; gap:13px; width:100%; text-align:left;
+  background:#fff; border:2.5px solid var(--line); border-radius:14px; padding:12px 16px; font-weight:600;
+}
+.opt:hover:not(:disabled){border-color:var(--accent); background:var(--accent-soft)}
+.opt:disabled{cursor:default}
+.opt .kbd{
+  flex:none; width:36px; height:36px; border-radius:11px; background:var(--accent-soft);
+  color:var(--accent); font-weight:800; display:flex; align-items:center; justify-content:center;
+}
+.opt .optpic{
+  flex:none; width:58px; height:58px; background:#F6F1E8; border:2px solid var(--line);
+  border-radius:11px; overflow:hidden;
+}
+.opt .optpic svg{display:block; width:100%; height:100%}
+/* Đúng = xanh lá dịu. Sai = KHÔNG dùng đỏ, chỉ mờ nhẹ → không tạo cảm giác bị phạt */
+.opt.correct{border-color:var(--ok); background:var(--ok-soft)}
+.opt.correct .kbd{background:var(--ok); color:#fff}
+.opt.tried{opacity:.5}
+.opt.tried .kbd{background:#EFEAE1; color:var(--ink3)}
+
+.feedback{margin-top:18px; border-radius:14px; padding:16px 18px; font-weight:600; display:none}
+.feedback.show{display:block}
+.feedback.ok{background:var(--ok-soft); color:#2F6B52; border:2px solid #BEDCCC}
+.feedback.hint{background:var(--hint-soft); color:#8A5A16; border:2px solid #EFD9B4}
+.nextbtn{
+  display:none; width:100%; margin-top:16px; background:var(--ok); color:#fff;
+  font-size:21px; font-weight:800; padding:16px; border-radius:14px; box-shadow:0 4px 0 #4A836A;
+}
+.nextbtn.show{display:block}
+.nextbtn:active{transform:translateY(2px); box-shadow:0 2px 0 #4A836A}
+
+/* ── Tiến trình (luôn ở DƯỚI CÙNG, không đổi chỗ) ── */
+.progress{margin-top:18px; padding:16px 22px}
+.progress-top{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:11px}
+.progress-label{font-weight:800}
+.dots{display:flex; gap:9px; flex-wrap:wrap; justify-content:flex-end}
+.dots.many{gap:6px; max-width:320px}
+.dots.many .dot{width:12px; height:12px; border-width:2px}
+.dot{width:17px; height:17px; border-radius:50%; background:#EBE4D8; border:2px solid #DDD4C5}
+.dot.done{background:var(--ok); border-color:var(--ok)}
+.dot.now{background:#fff; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
+.notebook{font-size:15.5px; color:var(--ink2); border-top:2px dashed var(--line); padding-top:11px; margin-top:4px}
+.notebook b{color:var(--ink)}
+.notebook li{margin-left:22px; margin-top:5px}
+
+/* ── Kết thúc ── */
+.end{text-align:center; padding:40px 28px}
+.end h2{font-size:31px; font-weight:800; margin:16px 0 12px; color:var(--ok)}
+.endpic{width:280px; height:220px; margin:0 auto; background:#F4EFE6; border:2px solid var(--line); border-radius:18px; overflow:hidden}
+.endpic svg{display:block; width:100%; height:100%}
+.endrow{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:26px}
+.btn2{background:var(--card); border:2.5px solid var(--accent); color:var(--accent); font-weight:800; padding:15px 30px; border-radius:999px}
+.btn2:hover{background:var(--accent-soft)}
+.btn2.primary{background:var(--accent); color:#fff}
+.btn2.primary:hover{background:#3F6B94}
+
+.hide{display:none !important}
+
+@media (max-width:860px){
+  body{font-size:18px; padding:12px}
+  .play{grid-template-columns:1fr}
+  .start h2{font-size:28px}
+  .question{font-size:20px}
+  .scenepic{height:180px}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <h1>🔍 Thám tử đọc hiểu</h1>
+    <button class="iconbtn" id="musicBtn" onclick="toggleMusic()" aria-label="Bật hoặc tắt nhạc nền">
+      <span id="musicIcon">🎵</span><span id="musicText">Nhạc: Bật</span>
+    </button>
+    <button class="iconbtn" id="soundBtn" onclick="toggleSound()" aria-label="Bật hoặc tắt tiếng khen và giọng đọc">
+      <span id="soundIcon">🔔</span><span id="soundText">Âm thanh: Bật</span>
+    </button>
+  </div>
+
+  <!-- ══ BẮT ĐẦU ══ -->
+  <div class="card start" id="screenStart">
+    <div class="hero" id="heroStart"></div>
+    <h2>Thám tử đọc hiểu</h2>
+    <p>Chào bạn! Mình là Kính Lúp.</p>
+    <p>Chúng ta sẽ cùng đọc truyện, xem hình và tìm ra câu trả lời nhé.</p>
+    <div class="calmnote">
+      🕊️ Không tính giờ. Bạn cứ đọc thật kỹ.<br>
+      Chọn sai cũng không sao, mình sẽ giúp bạn.
+    </div>
+    <div class="covers" id="coversBox"></div>
+    <div class="modes">
+      <button class="bigbtn" onclick="startGame()">🔍 Vụ án có cốt truyện</button>
+      <button class="bigbtn alt" onclick="startPractice()">⭐ Vòng luyện tập</button>
+    </div>
+    <div class="modehint" id="modeHint"></div>
+  </div>
+
+  <!-- ══ CHƠI ══ -->
+  <div id="screenPlay" class="hide">
+    <div class="play">
+      <div class="card panel">
+        <div class="panel-title">📖 Câu chuyện</div>
+        <div class="scenepic" id="scenePic"></div>
+        <div class="story" id="storyBox"></div>
+      </div>
+      <div class="card panel">
+        <div class="panel-title">❓ Câu hỏi</div>
+        <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:6px">
+          <div class="hero-sm" id="heroPlay"></div>
+          <div class="question" id="questionBox"></div>
+        </div>
+        <div class="opts" id="optsBox"></div>
+        <div class="feedback" id="feedbackBox" role="status" aria-live="polite"></div>
+        <button class="nextbtn" id="nextBtn" onclick="nextScene()">Tiếp theo →</button>
+      </div>
+    </div>
+    <div class="card progress">
+      <div class="progress-top">
+        <div class="progress-label" id="progressLabel"></div>
+        <div class="dots" id="dotsBox"></div>
+      </div>
+      <div class="notebook" id="notebookBox"></div>
+    </div>
+  </div>
+
+  <!-- ══ KẾT THÚC ══ -->
+  <div class="card end hide" id="screenEnd">
+    <div class="endpic" id="endArt"></div>
+    <h2 id="endTitle">Chúc mừng bạn!</h2>
+    <p id="endText" style="color:var(--ink2);max-width:560px;margin:0 auto"></p>
+    <div class="notebook" id="endNotebook" style="max-width:560px;margin:22px auto 0;text-align:left"></div>
+    <div class="endrow" id="endButtons"></div>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   PHẦN 1 — THƯ VIỆN HÌNH VẼ (SVG viết thẳng trong file)
+   Không dùng file ảnh rời ⇒ game vẫn chạy offline, copy đi đâu cũng được.
+   Nguyên tắc vẽ cho bé tự kỷ:
+     • Hình đơn giản, ít chi tiết thừa, nền trơn → không gây quá tải thị giác
+     • Nhân vật GIỮ NGUYÊN hình dáng ở mọi cảnh → bé nhận ra ngay
+     • Nét mặt hiền, trung tính, không cường điệu
+     • Không dùng màu chói, không nhấp nháy
+   ═══════════════════════════════════════════════════════════════════════ */
+const K = {
+  bear:'#A9743F', bearD:'#8B5D31', muzzle:'#DCB98A', dark:'#3A2A1C',
+  rab:'#EDE7DD', rabD:'#D8D0C2', pink:'#EFB4B4',
+  cat:'#E9A05C', catD:'#CE8443',
+  wood:'#C08B5C', woodD:'#9E7047', grass:'#8FB87A', grassD:'#7A9E67',
+  water:'#7FB3D5', grey:'#9AA6B4', greyD:'#7C8896',
+  bag:'#6B8CA8', bagD:'#55708A', paper:'#FFFFFF', sky:'#EAF2F8', line:'#E6DFD3',
+};
+const HAT = { red:['#CE5540','#A9412F'], blue:['#4B7BA8','#3A6086'], yellow:['#E4B84D','#C29A34'] };
+const PEN = { blue:['#3E8FA8','#2F7189'], pink:['#E48FA8','#C5748C'], black:['#4A5462','#333B47'] };
+
+/* ── Các mảnh ghép dùng lại nhiều lần ── */
+const P = {};
+
+// Chiếc mũ (dùng cho cả mũ rời lẫn mũ đội trên đầu)
+P.hat = (x, y, s, col) => {
+  const c = HAT[col] || HAT.red;
+  return '<g transform="translate('+x+','+y+') scale('+s+')">'
+    + '<path d="M-20 0 Q-20 -27 0 -27 Q20 -27 20 0 Z" fill="'+c[0]+'"/>'
+    + '<rect x="-20" y="-9" width="40" height="9" fill="'+c[1]+'"/>'
+    + '<ellipse cx="0" cy="0" rx="31" ry="7.5" fill="'+c[0]+'"/>'
+    + '</g>';
+};
+
+// Bác Gấu. hatCol = null → không đội mũ. mood: 'sad' | 'happy' | 'calm'
+P.bear = (x, y, s, hatCol, mood) => {
+  const eyes = '<circle cx="-12" cy="-5" r="3.6" fill="'+K.dark+'"/><circle cx="12" cy="-5" r="3.6" fill="'+K.dark+'"/>';
+  const mouth = mood === 'happy'
+    ? '<path d="M-9 16 q9 9 18 0" stroke="'+K.dark+'" stroke-width="2.6" fill="none" stroke-linecap="round"/>'
+    : (mood === 'sad'
+      ? '<path d="M-8 19 q8 -6 16 0" stroke="'+K.dark+'" stroke-width="2.6" fill="none" stroke-linecap="round"/>'
+      : '<path d="M-8 16 q8 6 16 0" stroke="'+K.dark+'" stroke-width="2.6" fill="none" stroke-linecap="round"/>');
+  return '<g transform="translate('+x+','+y+') scale('+s+')">'
+    + '<ellipse cx="0" cy="74" rx="38" ry="32" fill="'+K.bear+'"/>'            // thân
+    + '<ellipse cx="0" cy="80" rx="21" ry="20" fill="'+K.muzzle+'" opacity=".5"/>'
+    + '<circle cx="-25" cy="-25" r="11" fill="'+K.bearD+'"/>'                  // tai
+    + '<circle cx="25" cy="-25" r="11" fill="'+K.bearD+'"/>'
+    + '<circle cx="-25" cy="-25" r="5.5" fill="'+K.muzzle+'"/>'
+    + '<circle cx="25" cy="-25" r="5.5" fill="'+K.muzzle+'"/>'
+    + '<circle cx="0" cy="0" r="31" fill="'+K.bear+'"/>'                       // đầu
+    + '<ellipse cx="0" cy="12" rx="17" ry="13" fill="'+K.muzzle+'"/>'          // mõm
+    + '<ellipse cx="0" cy="5" rx="5.5" ry="4" fill="'+K.dark+'"/>'             // mũi
+    + eyes + mouth
+    + (hatCol ? P.hat(0, -22, 0.92, hatCol) : '')
+    + '</g>';
+};
+
+// Bạn Thỏ
+P.rabbit = (x, y, s, hatCol) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<ellipse cx="0" cy="62" rx="30" ry="27" fill="'+K.rab+'"/>'
+  + '<ellipse cx="-13" cy="-40" rx="7.5" ry="23" fill="'+K.rab+'" transform="rotate(-9 -13 -40)"/>'
+  + '<ellipse cx="13" cy="-40" rx="7.5" ry="23" fill="'+K.rab+'" transform="rotate(9 13 -40)"/>'
+  + '<ellipse cx="-13" cy="-40" rx="3.6" ry="15" fill="'+K.pink+'" transform="rotate(-9 -13 -40)"/>'
+  + '<ellipse cx="13" cy="-40" rx="3.6" ry="15" fill="'+K.pink+'" transform="rotate(9 13 -40)"/>'
+  + '<circle cx="0" cy="0" r="26" fill="'+K.rab+'"/>'
+  + '<circle cx="-10" cy="-4" r="3.2" fill="'+K.dark+'"/><circle cx="10" cy="-4" r="3.2" fill="'+K.dark+'"/>'
+  + '<path d="M-4 8 h8 l-4 4 Z" fill="'+K.pink+'"/>'
+  + '<path d="M0 12 q-6 6 -11 2 M0 12 q6 6 11 2" stroke="'+K.dark+'" stroke-width="2.2" fill="none" stroke-linecap="round"/>'
+  + (hatCol ? P.hat(0, -19, 0.8, hatCol) : '')
+  + '</g>';
+
+// Bạn Mèo
+P.cat = (x, y, s, mood) => {
+  const mouth = mood === 'happy'
+    ? '<path d="M-7 13 q7 7 14 0" stroke="'+K.dark+'" stroke-width="2.3" fill="none" stroke-linecap="round"/>'
+    : '<path d="M0 10 q-5 6 -10 2 M0 10 q5 6 10 2" stroke="'+K.dark+'" stroke-width="2.2" fill="none" stroke-linecap="round"/>';
+  return '<g transform="translate('+x+','+y+') scale('+s+')">'
+    + '<ellipse cx="0" cy="60" rx="28" ry="26" fill="'+K.cat+'"/>'
+    + '<path d="M-42 74 q-16 -6 -12 -22" stroke="'+K.catD+'" stroke-width="9" fill="none" stroke-linecap="round"/>'
+    + '<path d="M-24 -20 l-4 -24 l20 11 Z" fill="'+K.cat+'"/>'
+    + '<path d="M24 -20 l4 -24 l-20 11 Z" fill="'+K.cat+'"/>'
+    + '<path d="M-22 -19 l-2 -14 l12 6 Z" fill="'+K.pink+'"/>'
+    + '<path d="M22 -19 l2 -14 l-12 6 Z" fill="'+K.pink+'"/>'
+    + '<circle cx="0" cy="0" r="25" fill="'+K.cat+'"/>'
+    + '<ellipse cx="-9" cy="-4" rx="3.2" ry="4" fill="'+K.dark+'"/><ellipse cx="9" cy="-4" rx="3.2" ry="4" fill="'+K.dark+'"/>'
+    + '<path d="M-4 7 h8 l-4 4 Z" fill="'+K.pink+'"/>'
+    + mouth
+    + '<path d="M-14 6 h-14 M-14 11 h-13 M14 6 h14 M14 11 h13" stroke="'+K.catD+'" stroke-width="1.6" stroke-linecap="round"/>'
+    + '</g>';
+};
+
+// Bàn ăn (có thể đặt mũ / bánh lên trên)
+P.table = (x, y, s, on) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + (on || '')
+  + '<rect x="-58" y="0" width="116" height="11" rx="5" fill="'+K.wood+'"/>'
+  + '<rect x="-46" y="11" width="10" height="40" rx="4" fill="'+K.woodD+'"/>'
+  + '<rect x="36" y="11" width="10" height="40" rx="4" fill="'+K.woodD+'"/>'
+  + '</g>';
+
+P.cake = (x, y, s) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<ellipse cx="0" cy="0" rx="17" ry="5" fill="#E8DFD0"/>'
+  + '<path d="M-13 0 q13 -17 26 0 Z" fill="#E8C583"/>'
+  + '<circle cx="0" cy="-11" r="3.2" fill="#D9707A"/>'
+  + '</g>';
+
+// Vòi nước ngoài vườn + giọt nước
+P.tap = (x, y, s) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<rect x="-5" y="-42" width="10" height="42" rx="4" fill="'+K.grey+'"/>'
+  + '<rect x="-5" y="-42" width="26" height="9" rx="4" fill="'+K.greyD+'"/>'
+  + '<rect x="14" y="-36" width="8" height="13" rx="3" fill="'+K.greyD+'"/>'
+  + '<circle cx="-11" cy="-38" r="7" fill="'+K.greyD+'"/>'
+  + '<ellipse cx="18" cy="-14" rx="3.4" ry="4.6" fill="'+K.water+'"/>'
+  + '<ellipse cx="18" cy="-3" rx="2.6" ry="3.6" fill="'+K.water+'" opacity=".75"/>'
+  + '</g>';
+
+P.grassStrip = (y) =>
+  '<rect x="0" y="'+y+'" width="300" height="'+(200-y)+'" fill="'+K.grass+'"/>'
+  + '<path d="M0 '+y+' q20 -8 40 0 q20 -8 40 0 q20 -8 40 0 q20 -8 40 0 q20 -8 40 0 q20 -8 40 0 q20 -8 40 0" fill="'+K.grassD+'"/>';
+
+P.plant = (x, y, s) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<path d="M0 0 v-22" stroke="'+K.grassD+'" stroke-width="3" stroke-linecap="round"/>'
+  + '<ellipse cx="-8" cy="-18" rx="9" ry="5.5" fill="'+K.grassD+'" transform="rotate(-25 -8 -18)"/>'
+  + '<ellipse cx="8" cy="-24" rx="9" ry="5.5" fill="'+K.grassD+'" transform="rotate(25 8 -24)"/>'
+  + '</g>';
+
+// Đồng hồ chỉ giờ — h giờ, m phút (0 hoặc 30)
+P.clock = (x, y, s, h, m) => {
+  const ha = (h % 12) * 30 + (m / 60) * 30 - 90, ma = m * 6 - 90;
+  const R = d => (d * Math.PI) / 180;
+  return '<g transform="translate('+x+','+y+') scale('+s+')">'
+    + '<circle cx="0" cy="0" r="20" fill="#fff" stroke="'+K.greyD+'" stroke-width="3"/>'
+    + '<line x1="0" y1="0" x2="'+(9*Math.cos(R(ha))).toFixed(1)+'" y2="'+(9*Math.sin(R(ha))).toFixed(1)+'" stroke="'+K.dark+'" stroke-width="3" stroke-linecap="round"/>'
+    + '<line x1="0" y1="0" x2="'+(14*Math.cos(R(ma))).toFixed(1)+'" y2="'+(14*Math.sin(R(ma))).toFixed(1)+'" stroke="'+K.dark+'" stroke-width="2.2" stroke-linecap="round"/>'
+    + '<circle cx="0" cy="0" r="2.2" fill="'+K.dark+'"/>'
+    + '</g>';
+};
+
+P.question = (x, y, s, col) =>
+  '<text x="'+x+'" y="'+y+'" font-size="'+(38*s)+'" font-weight="800" text-anchor="middle" fill="'+(col||K.grey)+'" font-family="Arial">?</text>';
+
+// Bút chì
+P.pencil = (x, y, s, col, rot) => {
+  const c = PEN[col] || PEN.blue;
+  return '<g transform="translate('+x+','+y+') rotate('+(rot||0)+') scale('+s+')">'
+    + '<rect x="-30" y="-6" width="46" height="12" rx="2" fill="'+c[0]+'"/>'
+    + '<rect x="-30" y="-6" width="46" height="4" fill="'+c[1]+'"/>'
+    + '<path d="M16 -6 l14 6 l-14 6 Z" fill="#E8CFA8"/>'
+    + '<path d="M25 -2 l5 2 l-5 2 Z" fill="'+K.dark+'"/>'
+    + '<rect x="-36" y="-6" width="6" height="12" rx="2" fill="#E4A0A8"/>'
+    + '</g>';
+};
+
+// Cặp sách
+P.bag = (x, y, s, open) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<rect x="-28" y="-24" width="56" height="46" rx="10" fill="'+K.bag+'"/>'
+  + (open
+    ? '<path d="M-28 -18 q28 -22 56 0 v-6 q-28 -20 -56 0 Z" fill="'+K.bagD+'"/>'
+    : '<path d="M-28 -6 h56 v-10 q-28 -14 -56 0 Z" fill="'+K.bagD+'"/>')
+  + '<rect x="-9" y="0" width="18" height="12" rx="4" fill="'+K.bagD+'"/>'
+  + '<path d="M-18 -24 q18 -16 36 0" stroke="'+K.bagD+'" stroke-width="4" fill="none"/>'
+  + '</g>';
+
+// Bàn học + ghế
+P.desk = (x, y, s, under) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<rect x="-56" y="-40" width="112" height="10" rx="4" fill="'+K.wood+'"/>'
+  + '<rect x="-50" y="-30" width="9" height="40" rx="3" fill="'+K.woodD+'"/>'
+  + '<rect x="41" y="-30" width="9" height="40" rx="3" fill="'+K.woodD+'"/>'
+  + '<rect x="6" y="-14" width="32" height="7" rx="3" fill="'+K.woodD+'"/>'   // ghế
+  + '<rect x="8" y="-7" width="6" height="17" rx="2" fill="'+K.woodD+'"/>'
+  + '<rect x="30" y="-7" width="6" height="17" rx="2" fill="'+K.woodD+'"/>'
+  + '<rect x="32" y="-40" width="6" height="27" rx="2" fill="'+K.woodD+'"/>'
+  + (under || '')
+  + '<rect x="-70" y="10" width="150" height="6" rx="3" fill="#E0D6C6"/>'      // sàn nhà
+  + '</g>';
+
+P.lunchbox = (x, y, s) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<rect x="-24" y="-16" width="48" height="32" rx="7" fill="#E4B84D"/>'
+  + '<rect x="-24" y="-6" width="48" height="4" fill="#C29A34"/>'
+  + '<rect x="-6" y="-20" width="12" height="6" rx="3" fill="#C29A34"/>'
+  + '</g>';
+
+P.bed = (x, y, s) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<rect x="-44" y="-26" width="12" height="34" rx="4" fill="'+K.woodD+'"/>'
+  + '<rect x="-44" y="0" width="88" height="14" rx="5" fill="#DCC9AE"/>'
+  + '<rect x="-30" y="-12" width="26" height="13" rx="5" fill="#fff"/>'
+  + '<path d="M-4 -1 h48 v10 q-24 6 -48 0 Z" fill="'+K.bag+'"/>'
+  + '<rect x="34" y="14" width="9" height="12" rx="3" fill="'+K.woodD+'"/>'
+  + '<rect x="-44" y="14" width="9" height="12" rx="3" fill="'+K.woodD+'"/>'
+  + '</g>';
+
+P.shelf = (x, y, s) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<rect x="-34" y="-38" width="68" height="70" rx="5" fill="'+K.woodD+'"/>'
+  + '<rect x="-29" y="-33" width="58" height="27" fill="#F4EFE6"/>'
+  + '<rect x="-29" y="0" width="58" height="27" fill="#F4EFE6"/>'
+  + '<rect x="-25" y="-30" width="8" height="24" rx="2" fill="#CE5540"/>'
+  + '<rect x="-15" y="-27" width="8" height="21" rx="2" fill="#4B7BA8"/>'
+  + '<rect x="-5" y="-31" width="8" height="25" rx="2" fill="#5B9E7E"/>'
+  + '<rect x="-25" y="3" width="8" height="24" rx="2" fill="#E4B84D"/>'
+  + '<rect x="-15" y="6" width="8" height="21" rx="2" fill="#CE5540"/>'
+  + '</g>';
+
+P.drawer = (x, y, s) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<rect x="-32" y="-26" width="64" height="52" rx="6" fill="'+K.wood+'"/>'
+  + '<rect x="-26" y="-20" width="52" height="18" rx="3" fill="#EFE4D2"/>'
+  + '<rect x="-26" y="4" width="52" height="18" rx="3" fill="#EFE4D2"/>'
+  + '<circle cx="0" cy="-11" r="3" fill="'+K.woodD+'"/><circle cx="0" cy="13" r="3" fill="'+K.woodD+'"/>'
+  + '</g>';
+
+/* ── Các mảnh vẽ bổ sung cho 100 câu luyện tập ── */
+const UMB = { blue:['#4B7BA8','#3A6086'], red:['#CE5540','#A9412F'], brown:['#A9743F','#8B5D31'] };
+P.umbrella = (x, y, s, col) => {
+  const c = UMB[col] || UMB.blue;
+  return '<g transform="translate('+x+','+y+') scale('+s+')">'
+    + '<path d="M-30 0 q0 -32 30 -32 q30 0 30 32 Z" fill="'+c[0]+'"/>'
+    + '<path d="M-30 0 q10 -9 20 0 q10 -9 20 0 q10 -9 20 0" fill="'+c[1]+'"/>'
+    + '<path d="M0 0 v22 q0 8 -9 8" stroke="'+K.woodD+'" stroke-width="4" fill="none" stroke-linecap="round"/>'
+    + '</g>';
+};
+P.carrot = (x, y, s) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<path d="M0 26 l-11 -30 q11 -7 22 0 Z" fill="#E08A3C"/>'
+  + '<path d="M-6 -6 h12 M-8 2 h16" stroke="#C4732C" stroke-width="2" stroke-linecap="round"/>'
+  + '<path d="M0 -6 q-4 -14 -12 -16 M0 -6 q0 -16 0 -20 M0 -6 q4 -14 12 -16" stroke="'+K.grassD+'" stroke-width="4" fill="none" stroke-linecap="round"/>'
+  + '</g>';
+P.honey = (x, y, s) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<path d="M-17 -14 q17 -8 34 0 v24 q0 8 -17 8 q-17 0 -17 -8 Z" fill="#E4B84D"/>'
+  + '<rect x="-20" y="-19" width="40" height="8" rx="4" fill="#C29A34"/>'
+  + '<text x="0" y="10" font-size="13" font-weight="800" text-anchor="middle" fill="#8A5A16" font-family="Arial">MẬT</text>'
+  + '</g>';
+P.fish = (x, y, s) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<ellipse cx="0" cy="0" rx="24" ry="15" fill="#7FB3D5"/>'
+  + '<path d="M20 0 l16 -11 v22 Z" fill="#5E93B5"/>'
+  + '<circle cx="-10" cy="-4" r="3" fill="'+K.dark+'"/>'
+  + '<path d="M2 -12 q6 6 0 12" stroke="#5E93B5" stroke-width="2.5" fill="none"/>'
+  + '</g>';
+P.apple = (x, y, s, col) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<path d="M0 -12 q-16 -6 -16 10 q0 16 16 20 q16 -4 16 -20 q0 -16 -16 -10 Z" fill="'+(col||'#CE5540')+'"/>'
+  + '<path d="M0 -12 v-9" stroke="'+K.woodD+'" stroke-width="3" stroke-linecap="round"/>'
+  + '<ellipse cx="7" cy="-17" rx="7" ry="4" fill="'+K.grassD+'" transform="rotate(-20 7 -17)"/>'
+  + '</g>';
+P.book = (x, y, s, col) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<rect x="-20" y="-24" width="40" height="46" rx="4" fill="'+(col||'#4B7BA8')+'"/>'
+  + '<rect x="-14" y="-24" width="34" height="46" rx="3" fill="#FBF6EE"/>'
+  + '<path d="M-8 -12 h22 M-8 -3 h22 M-8 6 h16" stroke="#C9BBA4" stroke-width="2.5" stroke-linecap="round"/>'
+  + '</g>';
+P.flower = (x, y, s, col) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<path d="M0 0 v-26" stroke="'+K.grassD+'" stroke-width="3.5" stroke-linecap="round"/>'
+  + '<ellipse cx="-9" cy="-10" rx="8" ry="5" fill="'+K.grassD+'" transform="rotate(-25 -9 -10)"/>'
+  + [0,60,120,180,240,300].map(a => '<ellipse cx="0" cy="-38" rx="6.5" ry="11" fill="'+(col||'#E4B84D')+'" transform="rotate('+a+' 0 -28)"/>').join('')
+  + '<circle cx="0" cy="-28" r="6.5" fill="#C29A34"/>'
+  + '</g>';
+P.bird = (x, y, s) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<ellipse cx="0" cy="0" rx="20" ry="15" fill="#7FB3D5"/>'
+  + '<circle cx="-14" cy="-9" r="10" fill="#7FB3D5"/>'
+  + '<circle cx="-17" cy="-11" r="2.6" fill="'+K.dark+'"/>'
+  + '<path d="M-25 -9 l-8 3 l8 3 Z" fill="#E4B84D"/>'
+  + '<ellipse cx="4" cy="-1" rx="11" ry="7" fill="#5E93B5" transform="rotate(-15 4 -1)"/>'
+  + '<path d="M18 2 l14 -5 l-3 9 Z" fill="#5E93B5"/>'
+  + '</g>';
+P.egg = (x, y, s) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<ellipse cx="0" cy="2" rx="14" ry="18" fill="#F5EAD6"/>'
+  + '<ellipse cx="-4" cy="-4" rx="4" ry="6" fill="#FFF9EE"/>'
+  + '</g>';
+P.cup = (x, y, s) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + '<path d="M-15 -16 h30 l-3 30 q-12 5 -24 0 Z" fill="#fff" stroke="'+K.greyD+'" stroke-width="2.5"/>'
+  + '<path d="M15 -8 q10 2 8 10 q-2 8 -10 6" stroke="'+K.greyD+'" stroke-width="2.5" fill="none"/>'
+  + '<ellipse cx="0" cy="-16" rx="15" ry="4.5" fill="#EAF2F8" stroke="'+K.greyD+'" stroke-width="2"/>'
+  + '</g>';
+P.basket = (x, y, s, on) =>
+  '<g transform="translate('+x+','+y+') scale('+s+')">'
+  + (on || '')
+  + '<path d="M-26 -8 h52 l-6 26 q-20 6 -40 0 Z" fill="'+K.wood+'"/>'
+  + '<path d="M-26 -8 h52" stroke="'+K.woodD+'" stroke-width="5"/>'
+  + '<path d="M-16 -8 q16 -22 32 0" stroke="'+K.woodD+'" stroke-width="4" fill="none"/>'
+  + '</g>';
+
+/* ── Khung SVG ── */
+const svgScene = inner => '<svg viewBox="0 0 300 200" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Hình minh hoạ câu chuyện">'
+  + '<rect width="300" height="200" fill="#F4EFE6"/>' + inner + '</svg>';
+const svgIcon = inner => '<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'
+  + '<rect width="100" height="100" fill="#F6F1E8"/>' + inner + '</svg>';
+
+/* ── HÌNH MINH HOẠ TỪNG CẢNH ── */
+const ART = {
+  // Vụ 1
+  bearLostHat: () => svgScene(
+    '<rect x="0" y="150" width="300" height="50" fill="#EFE7D9"/>'
+    + P.bear(78, 72, 0.85, null, 'sad')
+    + P.table(212, 118, 0.72, '')
+    + P.question(212, 100, 1, '#B9A88F')
+    + P.clock(262, 36, 0.85, 8, 0)),
+
+  rabbitAtTable: () => svgScene(
+    '<rect x="0" y="150" width="300" height="50" fill="#EFE7D9"/>'
+    + P.rabbit(88, 78, 0.8, null)
+    + P.table(196, 118, 0.78, P.cake(-26, 0, 0.85) + P.hat(28, -1, 0.62, 'red'))
+    + P.clock(262, 36, 0.85, 8, 30)),
+
+  hatInGarden: () => svgScene(
+    '<rect width="300" height="200" fill="'+K.sky+'"/>'
+    + P.grassStrip(112)
+    + P.plant(44, 168, 1.1) + P.plant(268, 172, 0.9)
+    + P.tap(196, 150, 1.15)
+    + P.hat(130, 158, 0.95, 'red')
+    + '<ellipse cx="130" cy="150" rx="3" ry="4" fill="'+K.water+'"/>'
+    + '<ellipse cx="140" cy="146" rx="2.4" ry="3.4" fill="'+K.water+'" opacity=".8"/>'),
+
+  thinkClues: () => svgScene(
+    P.question(150, 52, 1.5, '#C9BBA4')
+    + '<g opacity=".95">'
+    + '<rect x="24" y="86" width="76" height="76" rx="14" fill="#fff" stroke="'+K.line+'" stroke-width="2"/>'
+    + P.hat(62, 132, 0.72, 'red')
+    + '<rect x="112" y="86" width="76" height="76" rx="14" fill="#fff" stroke="'+K.line+'" stroke-width="2"/>'
+    + P.table(150, 128, 0.5, '')
+    + '<rect x="200" y="86" width="76" height="76" rx="14" fill="#fff" stroke="'+K.line+'" stroke-width="2"/>'
+    + '<g transform="translate(238,124)">' + P.plant(-14, 30, 1) + P.tap(14, 30, 0.72) + '</g>'
+    + '</g>'),
+
+  bearHappyHat: () => svgScene(
+    '<rect width="300" height="200" fill="'+K.sky+'"/>'
+    + '<circle cx="150" cy="96" r="82" fill="#FFF6DC"/>'
+    + P.bear(150, 78, 1.0, 'red', 'happy')
+    + '<path d="M56 44 l5 12 l12 5 l-12 5 l-5 12 l-5 -12 l-12 -5 l12 -5 Z" fill="#E4B84D" opacity=".8"/>'
+    + '<path d="M248 60 l4 9 l9 4 l-9 4 l-4 9 l-4 -9 l-9 -4 l9 -4 Z" fill="#E4B84D" opacity=".65"/>'),
+
+  // Vụ 2
+  catLostPencil: () => svgScene(
+    '<rect x="0" y="150" width="300" height="50" fill="#EFE7D9"/>'
+    + P.cat(92, 76, 0.85, 'calm')
+    + P.question(206, 96, 1.2, '#B9A88F')
+    + P.pencil(214, 138, 0.9, 'blue', -18)),
+
+  catDrawing: () => svgScene(
+    '<rect x="0" y="150" width="300" height="50" fill="#EFE7D9"/>'
+    + P.cat(78, 72, 0.72, 'calm')
+    + P.desk(196, 150, 0.82, '')
+    + '<rect x="164" y="100" width="34" height="24" rx="3" fill="#fff" stroke="'+K.line+'" stroke-width="2"/>'
+    + P.pencil(206, 104, 0.62, 'blue', -20)
+    + P.bag(258, 150, 0.6, false)),
+
+  pencilUnderDesk: () => svgScene(
+    '<rect x="0" y="156" width="300" height="44" fill="#EFE7D9"/>'
+    + P.desk(150, 146, 1.05, '')
+    + P.pencil(158, 150, 0.95, 'blue', 8)
+    + P.question(66, 74, 0.9, '#C9BBA4')),
+
+  thinkCluesCat: () => svgScene(
+    P.question(150, 52, 1.5, '#C9BBA4')
+    + '<rect x="24" y="86" width="76" height="76" rx="14" fill="#fff" stroke="'+K.line+'" stroke-width="2"/>'
+    + P.pencil(62, 124, 0.72, 'blue', -18)
+    + '<rect x="112" y="86" width="76" height="76" rx="14" fill="#fff" stroke="'+K.line+'" stroke-width="2"/>'
+    + P.bag(150, 130, 0.62, false)
+    + '<rect x="200" y="86" width="76" height="76" rx="14" fill="#fff" stroke="'+K.line+'" stroke-width="2"/>'
+    + P.lunchbox(238, 124, 0.86)),
+
+  // ── 10 hình chủ đề cho ngân hàng 100 câu luyện tập ──
+  topicBear: () => svgScene('<rect x="0" y="150" width="300" height="50" fill="#EFE7D9"/>'
+    + P.bear(112, 74, 0.9, null, 'calm') + P.honey(218, 148, 1.1) + P.apple(258, 152, 1.1, '#CE5540')),
+  topicRabbit: () => svgScene('<rect x="0" y="150" width="300" height="50" fill="#EFE7D9"/>'
+    + P.rabbit(114, 80, 0.92, null) + P.carrot(214, 138, 1.3) + P.carrot(252, 146, 1.1)),
+  topicCat: () => svgScene('<rect x="0" y="150" width="300" height="50" fill="#EFE7D9"/>'
+    + P.cat(112, 78, 0.95, 'calm') + P.fish(220, 140, 1.3) + P.book(262, 140, 1.0, '#4B7BA8')),
+  topicHome: () => svgScene('<rect x="0" y="152" width="300" height="48" fill="#EFE7D9"/>'
+    + P.bed(72, 128, 0.95) + P.table(206, 120, 0.72, P.cup(-18, -4, 0.8) + P.flower(24, 0, 0.62, '#E4B84D'))),
+  topicClass: () => svgScene('<rect x="0" y="156" width="300" height="44" fill="#EFE7D9"/>'
+    + P.desk(112, 140, 0.95, '') + P.book(96, 88, 1.1, '#5B9E7E') + P.pencil(140, 92, 0.8, 'blue', -18)
+    + P.bag(240, 138, 0.9, false)),
+  topicGarden: () => svgScene('<rect width="300" height="200" fill="'+K.sky+'"/>' + P.grassStrip(116)
+    + P.flower(52, 168, 1.2, '#E4B84D') + P.flower(96, 176, 1.0, '#EFB4B4')
+    + P.plant(150, 178, 1.2) + P.tap(214, 154, 1.05) + P.bird(258, 66, 0.9)),
+  topicMarket: () => svgScene('<rect x="0" y="150" width="300" height="50" fill="#EFE7D9"/>'
+    + P.basket(104, 134, 1.5, P.apple(-14, -18, 1.0, '#CE5540') + P.apple(14, -20, 1.0, '#7FA86B'))
+    + P.fish(216, 128, 1.1) + P.egg(258, 136, 1.1) + P.cup(258, 96, 0.85)),
+  topicTime: () => svgScene('<circle cx="150" cy="98" r="76" fill="#EAF2F8"/>' + P.clock(150, 98, 3.0, 9, 0)),
+  topicCount: () => svgScene('<rect x="0" y="150" width="300" height="50" fill="#EFE7D9"/>'
+    + P.apple(70, 130, 1.5, '#CE5540') + P.apple(150, 130, 1.5, '#CE5540') + P.apple(230, 130, 1.5, '#CE5540')
+    + '<text x="150" y="46" font-size="30" font-weight="800" text-anchor="middle" fill="#8A99AC" font-family="Arial">1  2  3</text>'),
+  topicThink: () => svgScene(P.question(150, 66, 1.7, '#C9BBA4')
+    + '<rect x="46" y="98" width="66" height="66" rx="14" fill="#fff" stroke="'+K.line+'" stroke-width="2"/>'
+    + P.book(79, 132, 0.85, '#4B7BA8')
+    + '<rect x="188" y="98" width="66" height="66" rx="14" fill="#fff" stroke="'+K.line+'" stroke-width="2"/>'
+    + P.flower(221, 148, 0.85, '#E4B84D')),
+  practiceDone: () => svgScene('<rect width="300" height="200" fill="'+K.sky+'"/>'
+    + '<circle cx="150" cy="98" r="80" fill="#FFF6DC"/>'
+    + P.bear(96, 86, 0.72, 'red', 'happy') + P.rabbit(208, 92, 0.62, null)
+    + '<path d="M52 42 l5 12 l12 5 l-12 5 l-5 12 l-5 -12 l-12 -5 l12 -5 Z" fill="#E4B84D" opacity=".8"/>'
+    + '<path d="M252 54 l4 9 l9 4 l-9 4 l-4 9 l-4 -9 l-9 -4 l9 -4 Z" fill="#E4B84D" opacity=".65"/>'),
+
+  catHappyPencil: () => svgScene(
+    '<rect width="300" height="200" fill="'+K.sky+'"/>'
+    + '<circle cx="150" cy="96" r="80" fill="#FFF6DC"/>'
+    + P.cat(150, 82, 1.0, 'happy')
+    + P.pencil(212, 122, 1.0, 'blue', -28)
+    + '<path d="M58 46 l5 12 l12 5 l-12 5 l-5 12 l-5 -12 l-12 -5 l12 -5 Z" fill="#E4B84D" opacity=".8"/>'),
+};
+
+/* ── HÌNH CHO ĐÁP ÁN ── */
+const ICON = {
+  hatBlue:   () => svgIcon(P.hat(50, 66, 1.25, 'blue')),
+  hatRed:    () => svgIcon(P.hat(50, 66, 1.25, 'red')),
+  hatYellow: () => svgIcon(P.hat(50, 66, 1.25, 'yellow')),
+  garden:    () => svgIcon('<rect y="58" width="100" height="42" fill="'+K.grass+'"/>' + P.plant(28, 88, 1.5) + P.tap(66, 86, 0.85)),
+  table:     () => svgIcon(P.table(50, 44, 0.66, '')),
+  bed:       () => svgIcon(P.bed(50, 44, 0.85)),
+  pencilBlue:  () => svgIcon(P.pencil(50, 50, 1.15, 'blue', -20)),
+  pencilPink:  () => svgIcon(P.pencil(50, 50, 1.15, 'pink', -20)),
+  pencilBlack: () => svgIcon(P.pencil(50, 50, 1.15, 'black', -20)),
+  drawer:    () => svgIcon(P.drawer(50, 50, 0.86)),
+  bag:       () => svgIcon(P.bag(50, 52, 1.0, false)),
+  lunchbox:  () => svgIcon(P.lunchbox(50, 50, 1.15)),
+  underDesk: () => svgIcon('<g transform="translate(0,6)">' + P.desk(50, 66, 0.62, '') + P.pencil(54, 68, 0.62, 'blue', 8) + '</g>'),
+  shelf:     () => svgIcon(P.shelf(50, 46, 0.82)),
+
+  // ── Bổ sung cho 100 câu luyện tập ──
+  umbBlue:   () => svgIcon(P.umbrella(50, 76, 1.0, 'blue')),
+  umbRed:    () => svgIcon(P.umbrella(50, 76, 1.0, 'red')),
+  umbBrown:  () => svgIcon(P.umbrella(50, 76, 1.0, 'brown')),
+  carrot:    () => svgIcon(P.carrot(50, 50, 1.2)),
+  honey:     () => svgIcon(P.honey(50, 56, 1.1)),
+  fish:      () => svgIcon(P.fish(50, 50, 1.2)),
+  apple:     () => svgIcon(P.apple(50, 52, 1.3, '#CE5540')),
+  appleGreen:() => svgIcon(P.apple(50, 52, 1.3, '#7FA86B')),
+  book:      () => svgIcon(P.book(50, 52, 1.15, '#4B7BA8')),
+  bookGreen: () => svgIcon(P.book(50, 52, 1.15, '#5B9E7E')),
+  flower:    () => svgIcon(P.flower(50, 62, 1.15, '#E4B84D')),
+  bird:      () => svgIcon(P.bird(50, 52, 1.2)),
+  cake:      () => svgIcon(P.cake(50, 62, 1.6)),
+  egg:       () => svgIcon(P.egg(50, 52, 1.3)),
+  cup:       () => svgIcon(P.cup(50, 54, 1.15)),
+  clock:     () => svgIcon(P.clock(50, 50, 1.9, 9, 0)),
+  bear:      () => svgIcon(P.bear(50, 40, 0.42, null, 'calm')),
+  rabbit:    () => svgIcon(P.rabbit(50, 42, 0.45, null)),
+  cat:       () => svgIcon(P.cat(50, 44, 0.48, 'calm')),
+};
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PHẦN 2 — DỮ LIỆU CÁC VỤ ÁN
+   Thêm vụ án mới: chép một khối { } trong CASES rồi sửa nội dung.
+     text  : mảng các CÂU (mỗi câu 1 phần tử để tô sáng được)
+     art   : tên hình minh hoạ trong ART
+     q     : câu hỏi · opts: lựa chọn · answer: vị trí đáp án đúng (0 = A)
+     icons : hình cho từng lựa chọn (bỏ trống nếu câu hỏi trừu tượng)
+     hint  : gợi ý khi bé chọn chưa đúng (KHÔNG chê, chỉ hướng dẫn)
+     lit   : chỉ số câu sẽ tô sáng (đếm dồn từ đầu vụ án, bắt đầu từ 0)
+     clue  : dòng ghi vào Sổ tay thám tử
+   ═══════════════════════════════════════════════════════════════════════ */
+const CASES = [
+{
+  id:'mu-do',
+  name:'Chiếc mũ đỏ của Bác Gấu',
+  cover:'bearLostHat',
+  endArt:'bearHappyHat',
+  endText:'Bác Gấu đã tìm lại được chiếc mũ đỏ. Bạn Thỏ đội nhầm mũ khi ra vườn tưới cây. Bạn đã đọc rất kỹ và tìm ra sự thật!',
+  scenes:[
+    {
+      art:'bearLostHat',
+      text:['Sáng nay, Bác Gấu bị mất chiếc mũ màu đỏ.',
+            'Bác nhớ lần cuối nhìn thấy chiếc mũ là ở trên bàn ăn, lúc 8 giờ sáng.'],
+      q:'Chiếc mũ của Bác Gấu màu gì?',
+      opts:['Màu xanh','Màu đỏ','Màu vàng'],
+      icons:['hatBlue','hatRed','hatYellow'],
+      answer:1,
+      hint:'Bạn hãy đọc lại đoạn văn. Chiếc mũ được kể là màu gì?',
+      lit:[0],
+      clue:'Chiếc mũ bị mất có màu đỏ.'
+    },
+    {
+      art:'rabbitAtTable',
+      text:['Lúc 8 giờ 30 phút, bạn Thỏ đến chơi.',
+            'Thỏ ngồi ăn bánh ở bàn ăn.',
+            'Sau đó, Thỏ đi ra vườn tưới cây.'],
+      q:'Bạn Thỏ ngồi ăn bánh ở đâu?',
+      opts:['Ở trong vườn','Ở bàn ăn','Ở trên giường'],
+      icons:['garden','table','bed'],
+      answer:1,
+      hint:'Bạn hãy tìm câu có chữ "ăn bánh". Thỏ ngồi ở chỗ nào?',
+      lit:[3],
+      clue:'Bạn Thỏ đã ngồi ở bàn ăn, đúng chỗ để chiếc mũ.'
+    },
+    {
+      art:'hatInGarden',
+      text:['Bác Gấu đi ra vườn tìm mũ.',
+            'Bác thấy chiếc mũ đỏ nằm cạnh vòi nước.',
+            'Trên chiếc mũ có vài giọt nước.'],
+      q:'Bác Gấu tìm thấy chiếc mũ ở đâu?',
+      opts:['Cạnh vòi nước ở trong vườn','Ở trên bàn ăn','Ở trên giường'],
+      icons:['garden','table','bed'],
+      answer:0,
+      hint:'Bạn hãy đọc lại câu nói về chỗ chiếc mũ nằm. Nó nằm cạnh cái gì?',
+      lit:[6],
+      clue:'Chiếc mũ nằm cạnh vòi nước ở trong vườn.'
+    },
+    {
+      art:'thinkClues',
+      text:['Bây giờ bạn hãy suy nghĩ một chút nhé.'],
+      q:'Vì sao chiếc mũ lại ở trong vườn?',
+      opts:['Bác Gấu tự mang mũ ra vườn lúc 8 giờ',
+            'Bạn Thỏ đội nhầm mũ rồi ra vườn tưới cây',
+            'Chiếc mũ tự bay ra vườn'],
+      icons:null,
+      answer:1,
+      hint:'Chiếc mũ ở trên bàn ăn. Bạn Thỏ cũng ngồi ở bàn ăn. Sau đó Thỏ đi đâu?',
+      lit:[3,4,6],
+      clue:'Bạn Thỏ đội nhầm mũ rồi mang ra vườn. Đã giải xong vụ án!'
+    }
+  ]
+},
+{
+  id:'but-chi',
+  name:'Cây bút chì của bạn Mèo',
+  cover:'catLostPencil',
+  endArt:'catHappyPencil',
+  endText:'Bạn Mèo đã tìm lại được cây bút chì xanh. Nó rơi xuống dưới bàn học khi Mèo mở cặp. Bạn giỏi lắm!',
+  scenes:[
+    {
+      art:'catLostPencil',
+      text:['Bạn Mèo có một cây bút chì màu xanh.',
+            'Chiều nay, Mèo không tìm thấy cây bút chì đâu cả.'],
+      q:'Cây bút chì của bạn Mèo màu gì?',
+      opts:['Màu xanh','Màu hồng','Màu đen'],
+      icons:['pencilBlue','pencilPink','pencilBlack'],
+      answer:0,
+      hint:'Bạn hãy đọc lại câu đầu tiên. Cây bút chì màu gì?',
+      lit:[0],
+      clue:'Cây bút chì bị mất có màu xanh.'
+    },
+    {
+      art:'catDrawing',
+      text:['Buổi sáng, Mèo ngồi vẽ tranh ở bàn học.',
+            'Vẽ xong, Mèo cất bút chì vào cặp sách.',
+            'Đến trưa, Mèo mở cặp để lấy hộp cơm.'],
+      q:'Mèo cất cây bút chì vào đâu?',
+      opts:['Vào ngăn kéo','Vào cặp sách','Vào hộp cơm'],
+      icons:['drawer','bag','lunchbox'],
+      answer:1,
+      hint:'Bạn hãy tìm câu có chữ "cất bút chì". Mèo cất vào chỗ nào?',
+      lit:[3],
+      clue:'Mèo đã cất bút chì vào cặp sách.'
+    },
+    {
+      art:'pencilUnderDesk',
+      text:['Mèo cúi xuống nhìn dưới gầm bàn học.',
+            'Mèo thấy cây bút chì xanh nằm ngay dưới chân ghế.'],
+      q:'Cây bút chì nằm ở đâu?',
+      opts:['Dưới chân ghế, ở gầm bàn học','Ở trong hộp cơm','Ở trên giá sách'],
+      icons:['underDesk','lunchbox','shelf'],
+      answer:0,
+      hint:'Bạn hãy đọc lại câu cuối. Cây bút chì nằm ngay dưới cái gì?',
+      lit:[6],
+      clue:'Cây bút chì nằm dưới chân ghế, ở gầm bàn học.'
+    },
+    {
+      art:'thinkCluesCat',
+      text:['Bây giờ bạn hãy suy nghĩ một chút nhé.'],
+      q:'Vì sao cây bút chì lại rơi xuống gầm bàn?',
+      opts:['Mèo chưa bao giờ cất bút vào cặp',
+            'Bút chì rơi ra khi Mèo mở cặp lấy hộp cơm',
+            'Có người lấy bút chì đem giấu đi'],
+      icons:null,
+      answer:1,
+      hint:'Mèo cất bút vào cặp. Đến trưa Mèo mở cặp ra để lấy hộp cơm. Lúc mở cặp thì điều gì có thể xảy ra?',
+      lit:[3,4,7],
+      clue:'Bút chì rơi ra khi Mèo mở cặp lấy hộp cơm. Đã giải xong vụ án!'
+    }
+  ]
+}
+];
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PHẦN 2B — NGÂN HÀNG 100 CÂU ĐỐ (chế độ "Vòng luyện tập")
+   ---------------------------------------------------------------------
+   Khác với 2 vụ án có cốt truyện ở trên, MỖI CÂU Ở ĐÂY LÀ ĐỘC LẬP:
+   có đoạn văn riêng, không dựa vào câu nào trước đó ⇒ xáo trộn thoải mái
+   mà nội dung vẫn đúng.
+
+   Mỗi vòng chơi = 20 câu bốc ngẫu nhiên. Game NHỚ những câu đã ra
+   ⇒ 5 vòng đầu bé gặp đủ 100 câu khác nhau, không lặp lại.
+
+   Cú pháp:
+     Q(chủ đề, 'câu 1|câu 2', 'câu hỏi?', 'đáp án A|B|C', số thứ tự đáp án đúng (0/1/2),
+       'lời gợi ý', câu cần tô sáng, 'dòng ghi sổ tay', 'icon A|icon B|icon C')
+   • Chủ đề quyết định hình minh hoạ: bear · rabbit · cat · home · class ·
+     garden · market · time · count · think
+   • Câu tô sáng đếm từ 0. Nhiều câu thì viết '0,1'.
+   • Phần icon để trống nếu không có hình phù hợp (câu suy luận nên để trống).
+   ═══════════════════════════════════════════════════════════════════════ */
+function Q(topic, text, q, opts, answer, hint, lit, clue, icons){
+  return { topic, art:'topic'+topic[0].toUpperCase()+topic.slice(1),
+           text:text.split('|'), q, opts:opts.split('|'), answer, hint,
+           lit:String(lit).split(',').map(Number), clue,
+           icons: icons ? icons.split('|') : null };
+}
+
+const BANK = [
+/* ── BÁC GẤU ─────────────────────────────────────────────────────────── */
+Q('bear','Bác Gấu có một cái ô màu xanh.|Trời mưa, Bác Gấu mang ô ra ngoài.','Cái ô của Bác Gấu màu gì?','Màu xanh|Màu đỏ|Màu nâu',0,'Bạn hãy đọc lại câu đầu tiên. Cái ô màu gì?',0,'Cái ô của Bác Gấu màu xanh.','umbBlue|umbRed|umbBrown'),
+Q('bear','Bác Gấu rất thích ăn mật ong.|Mỗi sáng, Bác Gấu ăn một thìa mật ong.','Bác Gấu thích ăn gì?','Cà rốt|Mật ong|Cá',1,'Bạn hãy tìm câu có chữ "thích ăn".',0,'Bác Gấu thích ăn mật ong.','carrot|honey|fish'),
+Q('bear','Bác Gấu thức dậy lúc 6 giờ sáng.|Sau đó Bác đi tập thể dục.','Bác Gấu thức dậy lúc mấy giờ?','5 giờ|6 giờ|7 giờ',1,'Bạn hãy đọc lại câu đầu. Bác dậy lúc mấy giờ?',0,'Bác Gấu thức dậy lúc 6 giờ sáng.',''),
+Q('bear','Trong giỏ của Bác Gấu có 3 quả táo.|Bác để giỏ ở trên bàn.','Trong giỏ có mấy quả táo?','2 quả|3 quả|4 quả',1,'Bạn hãy tìm con số trong câu đầu tiên.',0,'Trong giỏ có 3 quả táo.',''),
+Q('bear','Nhà của Bác Gấu ở trong rừng.|Xung quanh nhà có rất nhiều cây cao.','Nhà Bác Gấu ở đâu?','Ở trong rừng|Ở trên núi|Ở bờ biển',0,'Bạn hãy đọc lại câu đầu. Nhà Bác ở chỗ nào?',0,'Nhà Bác Gấu ở trong rừng.',''),
+Q('bear','Bác Gấu đi đôi giày màu nâu.|Đôi giày đã cũ nhưng vẫn còn tốt.','Đôi giày của Bác Gấu màu gì?','Màu đen|Màu nâu|Màu trắng',1,'Bạn hãy tìm câu nói về đôi giày.',0,'Đôi giày của Bác Gấu màu nâu.',''),
+Q('bear','Buổi tối, Bác Gấu ngồi đọc sách.|Bác đọc sách ở cạnh cửa sổ.','Bác Gấu đọc sách vào lúc nào?','Buổi sáng|Buổi trưa|Buổi tối',2,'Câu đầu tiên nói rõ lúc nào. Bạn thử đọc lại nhé.',0,'Bác Gấu đọc sách vào buổi tối.',''),
+Q('bear','Bác Gấu nuôi một con cá vàng.|Con cá bơi trong bình nước trong.','Bác Gấu nuôi con gì?','Con chim|Con cá vàng|Con mèo',1,'Bạn hãy tìm câu có chữ "nuôi".',0,'Bác Gấu nuôi một con cá vàng.','bird|fish|cat'),
+Q('bear','Hôm nay trời rất lạnh.|Bác Gấu mặc thêm một chiếc áo len dày.','Vì sao Bác Gấu mặc áo len?','Vì trời lạnh|Vì trời nắng|Vì trời mưa',0,'Câu đầu nói trời thế nào? Trời như vậy thì người ta mặc gì?','0,1','Bác Gấu mặc áo len vì trời lạnh.',''),
+Q('bear','Mỗi buổi sáng, Bác Gấu tưới cây một lần.|Cây trước nhà nhờ vậy mà xanh tốt.','Bác Gấu tưới cây bao lâu một lần?','Mỗi buổi sáng|Mỗi tuần|Mỗi tháng',0,'Bạn hãy đọc lại mấy chữ đầu câu thứ nhất.',0,'Bác Gấu tưới cây mỗi buổi sáng.',''),
+
+/* ── BẠN THỎ ─────────────────────────────────────────────────────────── */
+Q('rabbit','Bạn Thỏ rất thích ăn cà rốt.|Mỗi ngày Thỏ ăn hai củ cà rốt.','Bạn Thỏ thích ăn gì?','Cà rốt|Mật ong|Cá',0,'Bạn hãy tìm câu có chữ "thích ăn".',0,'Bạn Thỏ thích ăn cà rốt.','carrot|honey|fish'),
+Q('rabbit','Bạn Thỏ có đôi tai rất dài.|Nhờ tai dài, Thỏ nghe được cả tiếng động nhỏ.','Đôi tai của Thỏ thế nào?','Rất ngắn|Rất dài|Rất tròn',1,'Bạn hãy đọc lại câu đầu tiên.',0,'Thỏ có đôi tai rất dài.',''),
+Q('rabbit','Thỏ chạy nhanh nhất lớp.|Hôm qua Thỏ về nhất cuộc thi chạy.','Ai chạy nhanh nhất lớp?','Bạn Mèo|Bạn Thỏ|Bác Gấu',1,'Bạn hãy tìm câu có chữ "nhanh nhất".',0,'Thỏ chạy nhanh nhất lớp.','cat|rabbit|bear'),
+Q('rabbit','Thỏ có 5 củ cà rốt.|Thỏ cho Bác Gấu 2 củ.','Thỏ còn lại mấy củ cà rốt?','2 củ|3 củ|5 củ',1,'Thỏ có 5 củ, cho đi 2 củ. Bạn thử đếm xem còn mấy củ.','0,1','Thỏ còn lại 3 củ cà rốt.',''),
+Q('rabbit','Bạn Thỏ đi học lúc 7 giờ sáng.|Thỏ đi bộ đến trường cùng bạn Mèo.','Thỏ đi học lúc mấy giờ?','6 giờ|7 giờ|8 giờ',1,'Bạn hãy tìm con số giờ ở câu đầu.',0,'Thỏ đi học lúc 7 giờ sáng.',''),
+Q('rabbit','Thỏ mang chiếc cặp màu hồng.|Trong cặp có sách và hộp bút.','Chiếc cặp của Thỏ màu gì?','Màu hồng|Màu xanh|Màu vàng',0,'Bạn hãy đọc lại câu nói về chiếc cặp.',0,'Chiếc cặp của Thỏ màu hồng.',''),
+Q('rabbit','Nhà bạn Thỏ ở ngay cạnh nhà Bác Gấu.|Hai nhà chỉ cách nhau một hàng rào.','Nhà Thỏ ở cạnh nhà ai?','Nhà bạn Mèo|Nhà Bác Gấu|Nhà cô giáo',1,'Bạn hãy tìm câu có chữ "ngay cạnh".',0,'Nhà Thỏ ở ngay cạnh nhà Bác Gấu.','cat|bear|rabbit'),
+Q('rabbit','Thỏ trồng rau ở trong vườn.|Thỏ trồng rau xà lách và cà rốt.','Thỏ trồng rau ở đâu?','Trong vườn|Trong bếp|Trên ban công',0,'Bạn hãy đọc lại câu đầu. Thỏ trồng rau ở chỗ nào?',0,'Thỏ trồng rau ở trong vườn.',''),
+Q('rabbit','Sáng nay Thỏ quên mang áo mưa.|Trên đường về, Thỏ bị ướt hết.','Vì sao Thỏ bị ướt?','Vì Thỏ đi bơi|Vì Thỏ quên mang áo mưa|Vì Thỏ làm đổ nước',1,'Câu đầu nói Thỏ quên mang cái gì? Không có cái đó thì sao?','0,1','Thỏ bị ướt vì quên mang áo mưa.',''),
+Q('rabbit','Trong các màu, Thỏ thích màu hồng nhất.|Đồ dùng của Thỏ hầu hết đều màu hồng.','Thỏ thích màu gì nhất?','Màu hồng|Màu xanh|Màu tím',0,'Bạn hãy tìm chữ "thích ... nhất" ở câu đầu.',0,'Thỏ thích màu hồng nhất.',''),
+
+/* ── BẠN MÈO ─────────────────────────────────────────────────────────── */
+Q('cat','Bạn Mèo có bộ lông màu vàng.|Mèo thường nằm ngủ bên cửa sổ.','Bộ lông của Mèo màu gì?','Màu đen|Màu vàng|Màu xám',1,'Bạn hãy đọc lại câu đầu tiên.',0,'Mèo có bộ lông màu vàng.',''),
+Q('cat','Mèo thích vẽ tranh.|Mèo vẽ tranh bằng bút màu.','Mèo thích làm gì?','Vẽ tranh|Đá bóng|Hát',0,'Bạn hãy tìm câu có chữ "thích".',0,'Mèo thích vẽ tranh.',''),
+Q('cat','Mèo có một quyển vở mới.|Bìa quyển vở màu xanh lá.','Bìa quyển vở màu gì?','Màu xanh lá|Màu đỏ|Màu nâu',0,'Bạn hãy đọc lại câu thứ hai.',1,'Bìa quyển vở của Mèo màu xanh lá.','bookGreen|book|bag'),
+Q('cat','Mèo ngủ trưa từ 12 giờ đến 1 giờ.|Ngủ dậy xong, Mèo đi học.','Mèo bắt đầu ngủ trưa lúc mấy giờ?','11 giờ|12 giờ|2 giờ',1,'Bạn hãy tìm chữ "từ ... giờ" ở câu đầu.',0,'Mèo ngủ trưa từ 12 giờ.',''),
+Q('cat','Mèo có hai người bạn thân.|Đó là bạn Thỏ và Bác Gấu.','Mèo có mấy người bạn thân?','Một người|Hai người|Ba người',1,'Bạn hãy tìm con số ở câu đầu tiên.',0,'Mèo có hai người bạn thân.',''),
+Q('cat','Mèo rất thích ăn cá.|Mẹ nấu cá cho Mèo vào bữa tối.','Mèo thích ăn gì?','Ăn cá|Ăn cà rốt|Ăn bánh',0,'Bạn hãy tìm câu có chữ "thích ăn".',0,'Mèo thích ăn cá.','fish|carrot|cake'),
+Q('cat','Hôm nay Mèo đi giày thể thao.|Mèo chuẩn bị đi đá bóng với các bạn.','Vì sao Mèo đi giày thể thao?','Vì Mèo đi ngủ|Vì Mèo đi đá bóng|Vì Mèo đi bơi',1,'Câu thứ hai nói Mèo chuẩn bị đi làm gì?','0,1','Mèo đi giày thể thao để đi đá bóng.',''),
+Q('cat','Mèo cất bút màu trong hộp bút.|Hộp bút để trong ngăn bàn.','Hộp bút để ở đâu?','Trong ngăn bàn|Trong cặp|Trên giường',0,'Bạn hãy đọc lại câu thứ hai.',1,'Hộp bút để trong ngăn bàn.','drawer|bag|bed'),
+Q('cat','Mèo giúp mẹ quét nhà mỗi chiều.|Mẹ khen Mèo rất chăm chỉ.','Mèo giúp mẹ làm gì?','Nấu cơm|Quét nhà|Rửa bát',1,'Bạn hãy tìm câu có chữ "giúp mẹ".',0,'Mèo giúp mẹ quét nhà.',''),
+Q('cat','Mèo học lớp 4.|Cô giáo của Mèo tên là cô Hươu.','Mèo học lớp mấy?','Lớp 3|Lớp 4|Lớp 5',1,'Bạn hãy tìm con số ở câu đầu tiên.',0,'Mèo học lớp 4.',''),
+
+/* ── Ở NHÀ ───────────────────────────────────────────────────────────── */
+Q('home','Trên bàn ăn có một bình hoa.|Bình hoa cắm ba bông cúc vàng.','Trên bàn ăn có gì?','Một bình hoa|Một quyển sách|Một cái mũ',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Trên bàn ăn có một bình hoa.','flower|book|hatRed'),
+Q('home','Cái ghế màu nâu đặt cạnh bàn học.|Trên ghế có một chiếc gối nhỏ.','Cái ghế màu gì?','Màu nâu|Màu trắng|Màu xanh',0,'Bạn hãy tìm câu nói về cái ghế.',0,'Cái ghế màu nâu.',''),
+Q('home','Chiếc chăn được gấp gọn trên giường.|Cạnh giường có một cái đèn ngủ.','Chiếc chăn ở đâu?','Trên giường|Trong tủ|Dưới sàn',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Chiếc chăn ở trên giường.','bed|drawer|table'),
+Q('home','Trong tủ lạnh có sữa và trái cây.|Mẹ mua sữa từ hôm qua.','Trong tủ lạnh có gì?','Sữa và trái cây|Bánh và kẹo|Cá và thịt',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Trong tủ lạnh có sữa và trái cây.',''),
+Q('home','Cái đồng hồ treo trên tường.|Đồng hồ chỉ đúng 9 giờ.','Đồng hồ chỉ mấy giờ?','8 giờ|9 giờ|10 giờ',1,'Bạn hãy đọc lại câu thứ hai.',1,'Đồng hồ chỉ 9 giờ.',''),
+Q('home','Đôi dép để ngay trước cửa.|Ai vào nhà cũng bỏ dép ở đó.','Đôi dép để ở đâu?','Trước cửa|Trong bếp|Dưới gầm giường',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Đôi dép để trước cửa.',''),
+Q('home','Chậu cây nhỏ đặt bên cửa sổ.|Cây có nhiều lá xanh.','Chậu cây đặt ở đâu?','Bên cửa sổ|Trên bàn ăn|Trong tủ',0,'Bạn hãy tìm câu có chữ "chậu cây".',0,'Chậu cây đặt bên cửa sổ.',''),
+Q('home','Cái ô đang ướt nên để ngoài hiên.|Trời vừa mới tạnh mưa.','Vì sao cái ô để ngoài hiên?','Vì ô bị ướt|Vì ô bị rách|Vì ô quá to',0,'Câu đầu nói cái ô đang thế nào?','0,1','Cái ô để ngoài hiên vì đang ướt.',''),
+Q('home','Trong bếp có mùi bánh thơm.|Mẹ đang nướng bánh mì.','Mẹ đang làm gì?','Nướng bánh mì|Rửa bát|Quét nhà',0,'Bạn hãy đọc lại câu thứ hai.',1,'Mẹ đang nướng bánh mì.',''),
+Q('home','Cái cốc màu trắng để trên kệ.|Bên cạnh cốc là một cái đĩa nhỏ.','Cái cốc màu gì?','Màu trắng|Màu vàng|Màu đen',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Cái cốc màu trắng.','cup|honey|book'),
+
+/* ── LỚP HỌC ─────────────────────────────────────────────────────────── */
+Q('class','Lớp của Mèo có 20 bạn.|Hôm nay có 2 bạn nghỉ học.','Lớp của Mèo có mấy bạn?','10 bạn|20 bạn|30 bạn',1,'Bạn hãy tìm con số ở câu đầu tiên.',0,'Lớp của Mèo có 20 bạn.',''),
+Q('class','Cô giáo viết bài lên bảng.|Cả lớp chép bài vào vở.','Cô giáo làm gì?','Viết bài lên bảng|Đọc truyện|Phát bánh',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Cô giáo viết bài lên bảng.',''),
+Q('class','Giờ ra chơi bắt đầu lúc 9 giờ 30.|Các bạn chạy ra sân chơi.','Giờ ra chơi bắt đầu lúc mấy giờ?','9 giờ|9 giờ 30|10 giờ',1,'Bạn hãy đọc kỹ con số ở câu đầu.',0,'Giờ ra chơi bắt đầu lúc 9 giờ 30.',''),
+Q('class','Bàn của Thỏ ở dãy bên trái.|Bàn của Mèo ở ngay phía sau.','Bàn của Thỏ ở đâu?','Dãy bên trái|Dãy bên phải|Ở giữa lớp',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Bàn của Thỏ ở dãy bên trái.',''),
+Q('class','Trên tường lớp học có một tấm bản đồ.|Bên cạnh bản đồ là bảng thời khoá biểu.','Trên tường lớp có gì?','Tấm bản đồ|Cái gương|Cái quạt',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Trên tường lớp có một tấm bản đồ.',''),
+Q('class','Hôm nay lớp học môn Toán.|Sau môn Toán là môn Tiếng Việt.','Sau môn Toán là môn gì?','Tiếng Việt|Âm nhạc|Thể dục',0,'Bạn hãy đọc lại câu thứ hai.',1,'Sau môn Toán là môn Tiếng Việt.',''),
+Q('class','Thỏ quên mang vở nên phải mượn giấy.|Bạn Mèo cho Thỏ mượn một tờ.','Vì sao Thỏ phải mượn giấy?','Vì Thỏ quên mang vở|Vì vở bị rách|Vì Thỏ hết mực',0,'Câu đầu nói Thỏ quên mang cái gì?',0,'Thỏ mượn giấy vì quên mang vở.',''),
+Q('class','Mỗi bạn được phát một quyển truyện.|Cả lớp đọc truyện trong 15 phút.','Cả lớp đọc truyện trong bao lâu?','5 phút|15 phút|50 phút',1,'Bạn hãy tìm con số phút ở câu thứ hai.',1,'Cả lớp đọc truyện trong 15 phút.',''),
+Q('class','Lớp trưởng tên là bạn Sóc.|Bạn Sóc rất chăm chỉ và tốt bụng.','Lớp trưởng tên là gì?','Bạn Sóc|Bạn Thỏ|Bạn Mèo',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Lớp trưởng là bạn Sóc.',''),
+Q('class','Cuối buổi học, cả lớp dọn bàn ghế.|Sau đó các bạn xếp hàng ra về.','Cả lớp làm gì cuối buổi học?','Dọn bàn ghế|Ăn trưa|Ngủ trưa',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Cuối buổi học cả lớp dọn bàn ghế.',''),
+
+/* ── KHU VƯỜN ────────────────────────────────────────────────────────── */
+Q('garden','Trong vườn có một cây táo.|Trên cây có rất nhiều quả chín.','Trong vườn có cây gì?','Cây táo|Cây chuối|Cây dừa',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Trong vườn có một cây táo.','apple|carrot|flower'),
+Q('garden','Bông hoa hướng dương màu vàng.|Hoa nở to bằng bàn tay.','Bông hoa màu gì?','Màu vàng|Màu tím|Màu trắng',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Bông hoa hướng dương màu vàng.','flower|apple|book'),
+Q('garden','Có một con bướm đậu trên lá.|Con bướm có đôi cánh màu cam.','Con bướm đậu ở đâu?','Trên lá|Trên hoa|Dưới đất',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Con bướm đậu trên lá.',''),
+Q('garden','Bác Gấu tưới cây lúc 7 giờ sáng.|Buổi chiều Bác không tưới nữa.','Bác Gấu tưới cây lúc mấy giờ?','6 giờ|7 giờ|8 giờ',1,'Bạn hãy tìm con số giờ ở câu đầu.',0,'Bác Gấu tưới cây lúc 7 giờ sáng.',''),
+Q('garden','Luống rau xà lách nằm cạnh hàng rào.|Luống cà rốt nằm ở giữa vườn.','Luống cà rốt nằm ở đâu?','Cạnh hàng rào|Ở giữa vườn|Sau nhà',1,'Bạn hãy đọc lại câu thứ hai, câu nói về cà rốt.',1,'Luống cà rốt nằm ở giữa vườn.',''),
+Q('garden','Trời không mưa suốt một tuần.|Đất trong vườn bị khô nứt.','Vì sao đất bị khô?','Vì trời không mưa|Vì trời quá lạnh|Vì có nhiều cây',0,'Câu đầu nói trời thế nào suốt một tuần?','0,1','Đất khô vì trời không mưa suốt một tuần.',''),
+Q('garden','Trong vườn có ba con chim nhỏ.|Chúng đang hót trên cành cây.','Trong vườn có mấy con chim?','Hai con|Ba con|Bốn con',1,'Bạn hãy tìm con số ở câu đầu tiên.',0,'Trong vườn có ba con chim.','bird|bird|bird'),
+Q('garden','Cái vòi nước đặt ở góc vườn.|Bên cạnh vòi có một cái xô.','Cái vòi nước ở đâu?','Góc vườn|Giữa vườn|Trước cửa nhà',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Vòi nước đặt ở góc vườn.','garden|table|bed'),
+Q('garden','Quả táo chín có màu đỏ.|Quả táo chưa chín có màu xanh.','Quả táo chín màu gì?','Màu đỏ|Màu xanh|Màu vàng',0,'Bạn hãy đọc lại câu đầu, câu nói về quả CHÍN.',0,'Quả táo chín có màu đỏ.','apple|appleGreen|flower'),
+Q('garden','Sau cơn mưa, vườn có nhiều vũng nước.|Bác Gấu đi ủng để không bị ướt chân.','Vì sao Bác Gấu đi ủng?','Để không bị ướt chân|Để đi nhanh hơn|Để cho đẹp',0,'Bạn hãy đọc lại câu thứ hai, phần sau chữ "để".','0,1','Bác Gấu đi ủng để không bị ướt chân.',''),
+
+/* ── ĐI CHỢ ──────────────────────────────────────────────────────────── */
+Q('market','Mẹ đi chợ mua rau và cá.|Mẹ đi chợ vào buổi sáng.','Mẹ mua gì ở chợ?','Rau và cá|Bánh và kẹo|Sách và vở',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Mẹ mua rau và cá.',''),
+Q('market','Một quả cam giá 5 nghìn đồng.|Mẹ mua hai quả cam.','Một quả cam giá bao nhiêu?','3 nghìn|5 nghìn|10 nghìn',1,'Bạn hãy tìm con số ở câu đầu tiên.',0,'Một quả cam giá 5 nghìn đồng.',''),
+Q('market','Trong giỏ của mẹ có 6 quả trứng.|Mẹ để giỏ trên bàn bếp.','Trong giỏ có mấy quả trứng?','4 quả|6 quả|8 quả',1,'Bạn hãy tìm con số ở câu đầu tiên.',0,'Trong giỏ có 6 quả trứng.','egg|egg|egg'),
+Q('market','Cửa hàng bánh mở cửa lúc 6 giờ.|Cửa hàng đóng cửa lúc 8 giờ tối.','Cửa hàng bánh mở cửa lúc mấy giờ?','5 giờ|6 giờ|7 giờ',1,'Bạn hãy đọc câu đầu, phần nói "mở cửa".',0,'Cửa hàng bánh mở cửa lúc 6 giờ.',''),
+Q('market','Mèo cầm giỏ giúp mẹ.|Cái giỏ khá nặng vì có nhiều đồ.','Vì sao cái giỏ nặng?','Vì có nhiều đồ|Vì giỏ bị ướt|Vì giỏ rất to',0,'Bạn hãy đọc lại câu thứ hai, phần sau chữ "vì".',1,'Giỏ nặng vì có nhiều đồ.',''),
+Q('market','Chợ nằm ở cuối con đường.|Từ nhà đi bộ đến chợ mất 10 phút.','Đi bộ đến chợ mất bao lâu?','5 phút|10 phút|20 phút',1,'Bạn hãy tìm con số phút ở câu thứ hai.',1,'Đi bộ đến chợ mất 10 phút.',''),
+Q('market','Cô bán hàng mặc áo màu xanh.|Cô cười rất tươi với khách.','Cô bán hàng mặc áo màu gì?','Màu xanh|Màu đỏ|Màu vàng',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Cô bán hàng mặc áo màu xanh.',''),
+Q('market','Mẹ quên mang túi vải.|Mẹ phải xin thêm một cái túi ở chợ.','Vì sao mẹ phải xin túi?','Vì mẹ quên mang túi vải|Vì túi bị rách|Vì mẹ mua ít đồ',0,'Câu đầu nói mẹ quên mang cái gì?','0,1','Mẹ xin túi vì quên mang túi vải.',''),
+Q('market','Mẹ mua ba con cá.|Mẹ để cá vào ngăn đá tủ lạnh.','Mẹ để cá ở đâu?','Ngăn đá tủ lạnh|Trên bàn ăn|Trong giỏ',0,'Bạn hãy đọc lại câu thứ hai.',1,'Mẹ để cá vào ngăn đá tủ lạnh.',''),
+Q('market','Trên đường về, mẹ ghé mua bánh mì.|Bánh mì còn nóng và thơm.','Mẹ ghé mua gì trên đường về?','Bánh mì|Sữa|Trái cây',0,'Bạn hãy đọc lại câu đầu tiên.',0,'Mẹ ghé mua bánh mì.',''),
+
+/* ── THỜI GIAN ───────────────────────────────────────────────────────── */
+Q('time','Bây giờ là 3 giờ chiều.|Một tiếng nữa Mèo sẽ đi học vẽ.','Mèo đi học vẽ lúc mấy giờ?','3 giờ|4 giờ|5 giờ',1,'Bây giờ 3 giờ. Thêm một tiếng nữa là mấy giờ?','0,1','Mèo đi học vẽ lúc 4 giờ.',''),
+Q('time','Thỏ ăn sáng lúc 6 giờ 30.|Thỏ ăn trưa lúc 11 giờ 30.','Thỏ ăn sáng lúc mấy giờ?','6 giờ|6 giờ 30|11 giờ 30',1,'Bạn hãy đọc câu đầu, câu nói về bữa SÁNG.',0,'Thỏ ăn sáng lúc 6 giờ 30.',''),
+Q('time','Một tuần có bảy ngày.|Hôm nay là thứ Hai.','Một tuần có mấy ngày?','Năm ngày|Bảy ngày|Mười ngày',1,'Bạn hãy đọc lại câu đầu tiên.',0,'Một tuần có bảy ngày.',''),
+Q('time','Hôm nay là thứ Sáu.|Ngày mai cả nhà đi chơi.','Ngày mai là thứ mấy?','Thứ Năm|Thứ Bảy|Chủ Nhật',1,'Hôm nay là thứ Sáu. Ngày sau thứ Sáu là thứ mấy?',0,'Ngày mai là thứ Bảy.',''),
+Q('time','Buổi sáng Mèo đi học.|Buổi chiều Mèo về nhà làm bài tập.','Buổi chiều Mèo làm gì?','Đi học|Làm bài tập|Đi chợ',1,'Bạn hãy đọc câu thứ hai, câu nói về buổi CHIỀU.',1,'Buổi chiều Mèo làm bài tập.',''),
+Q('time','Phim bắt đầu lúc 8 giờ tối.|Phim dài đúng một tiếng.','Phim kết thúc lúc mấy giờ?','8 giờ|9 giờ|10 giờ',1,'Phim bắt đầu 8 giờ và dài một tiếng. Vậy hết lúc mấy giờ?','0,1','Phim kết thúc lúc 9 giờ tối.',''),
+Q('time','Mùa hè trời nóng.|Mùa đông trời lạnh.','Mùa nào trời lạnh?','Mùa hè|Mùa đông|Cả hai mùa',1,'Bạn hãy đọc câu thứ hai.',1,'Mùa đông trời lạnh.',''),
+Q('time','Thỏ tập đàn 30 phút mỗi ngày.|Thỏ tập vào buổi tối.','Thỏ tập đàn bao lâu mỗi ngày?','15 phút|30 phút|60 phút',1,'Bạn hãy tìm con số phút ở câu đầu.',0,'Thỏ tập đàn 30 phút mỗi ngày.',''),
+Q('time','Bác Gấu đi ngủ lúc 10 giờ đêm.|Bác dậy lúc 6 giờ sáng.','Bác Gấu dậy lúc mấy giờ?','6 giờ sáng|10 giờ đêm|8 giờ sáng',0,'Bạn hãy đọc câu thứ hai, câu nói về lúc DẬY.',1,'Bác Gấu dậy lúc 6 giờ sáng.',''),
+Q('time','Sinh nhật Mèo vào tháng 5.|Sinh nhật Thỏ vào tháng 9.','Sinh nhật Thỏ vào tháng mấy?','Tháng 5|Tháng 9|Tháng 12',1,'Bạn hãy đọc câu thứ hai, câu nói về THỎ.',1,'Sinh nhật Thỏ vào tháng 9.',''),
+
+/* ── ĐẾM SỐ ──────────────────────────────────────────────────────────── */
+Q('count','Trên đĩa có 4 cái bánh.|Mèo ăn hết 1 cái.','Trên đĩa còn mấy cái bánh?','2 cái|3 cái|4 cái',1,'Có 4 cái, ăn mất 1 cái. Bạn thử đếm xem còn mấy.','0,1','Trên đĩa còn 3 cái bánh.',''),
+Q('count','Thỏ có 2 quyển vở.|Mẹ mua thêm 3 quyển nữa.','Thỏ có tất cả mấy quyển vở?','3 quyển|5 quyển|6 quyển',1,'Có 2 quyển, thêm 3 quyển. Bạn thử đếm gộp lại.','0,1','Thỏ có tất cả 5 quyển vở.',''),
+Q('count','Trong hộp có 8 cây bút chì.|Trong hộp không có bút mực.','Trong hộp có mấy cây bút chì?','6 cây|8 cây|10 cây',1,'Bạn hãy tìm con số ở câu đầu tiên.',0,'Trong hộp có 8 cây bút chì.',''),
+Q('count','Có 5 con chim đậu trên cây.|Hai con bay đi mất.','Còn mấy con chim trên cây?','2 con|3 con|5 con',1,'Có 5 con, bay đi 2 con. Bạn thử đếm xem còn mấy.','0,1','Còn 3 con chim trên cây.',''),
+Q('count','Bác Gấu hái 10 quả táo.|Bác cho Thỏ 4 quả.','Bác Gấu còn mấy quả táo?','4 quả|6 quả|10 quả',1,'Có 10 quả, cho đi 4 quả. Bạn thử đếm xem còn mấy.','0,1','Bác Gấu còn 6 quả táo.',''),
+Q('count','Lớp có 3 hàng bàn.|Mỗi hàng có 4 cái bàn.','Lớp có tất cả mấy cái bàn?','7 cái|12 cái|34 cái',1,'Có 3 hàng, mỗi hàng 4 cái. Bạn thử đếm 4, rồi 8, rồi 12.','0,1','Lớp có tất cả 12 cái bàn.',''),
+Q('count','Mèo có 6 viên bi.|Mèo chia đều cho 2 bạn.','Mỗi bạn được mấy viên bi?','2 viên|3 viên|6 viên',1,'Chia 6 viên cho 2 bạn thì mỗi bạn được bao nhiêu?','0,1','Mỗi bạn được 3 viên bi.',''),
+Q('count','Trên bàn có 7 quyển sách.|Thỏ lấy đi 2 quyển.','Trên bàn còn mấy quyển sách?','4 quyển|5 quyển|7 quyển',1,'Có 7 quyển, lấy đi 2 quyển. Bạn thử đếm xem còn mấy.','0,1','Trên bàn còn 5 quyển sách.',''),
+Q('count','Một vỉ trứng có 6 quả.|Mẹ mua 2 vỉ trứng.','Mẹ mua tất cả mấy quả trứng?','8 quả|12 quả|6 quả',1,'Mỗi vỉ 6 quả, mẹ mua 2 vỉ. Bạn thử đếm 6 rồi 12.','0,1','Mẹ mua tất cả 12 quả trứng.',''),
+Q('count','Vườn có 9 luống rau.|Bác Gấu đã tưới xong 5 luống.','Còn mấy luống chưa tưới?','3 luống|4 luống|5 luống',1,'Có 9 luống, tưới xong 5 luống. Bạn thử đếm xem còn mấy.','0,1','Còn 4 luống rau chưa tưới.',''),
+
+/* ── SUY LUẬN (không có hình đáp án, để bé phải đọc và nghĩ) ─────────── */
+Q('think','Mặt đất ướt và có nhiều vũng nước.|Bầu trời vẫn còn nhiều mây xám.','Chuyện gì vừa xảy ra?','Trời vừa mưa|Trời vừa nắng to|Có người quét sân',0,'Đất ướt, có vũng nước, trời nhiều mây. Bạn nghĩ trời vừa thế nào?','0,1','Trời vừa mưa xong.',''),
+Q('think','Mèo cầm ô và mặc áo mưa.|Mèo chuẩn bị ra ngoài.','Bên ngoài trời thế nào?','Trời đang mưa|Trời đang nắng|Trời có tuyết',0,'Người ta cầm ô và mặc áo mưa khi trời thế nào?','0,1','Bên ngoài trời đang mưa.',''),
+Q('think','Bác Gấu ngáp liên tục.|Bác dụi mắt mấy lần.','Bác Gấu đang thế nào?','Đang buồn ngủ|Đang vui|Đang đói',0,'Ngáp và dụi mắt là dấu hiệu của điều gì?','0,1','Bác Gấu đang buồn ngủ.',''),
+Q('think','Trên bàn có bánh kem và nến.|Các bạn cầm quà đứng quanh bàn.','Hôm nay là ngày gì?','Sinh nhật|Ngày khai giảng|Ngày Tết',0,'Có bánh kem, nến và quà. Bạn nghĩ đó là ngày gì?','0,1','Hôm nay là ngày sinh nhật.',''),
+Q('think','Thỏ ôm bụng và nói không muốn ăn.|Mẹ đưa Thỏ đi khám.','Thỏ đang thế nào?','Thỏ bị đau bụng|Thỏ rất vui|Thỏ đang no',0,'Ôm bụng và phải đi khám là dấu hiệu của điều gì?','0,1','Thỏ đang bị đau bụng.',''),
+Q('think','Mèo mặc áo phao và đội mũ len.|Mèo còn quàng thêm khăn.','Trời hôm nay thế nào?','Trời rất lạnh|Trời rất nóng|Trời mưa nhỏ',0,'Người ta mặc áo phao, đội mũ len khi trời thế nào?','0,1','Trời hôm nay rất lạnh.',''),
+Q('think','Sân trường vắng tanh.|Cửa các lớp học đều đóng.','Vì sao sân trường vắng?','Vì đang trong giờ học|Vì đang giờ ra chơi|Vì trường mới xây',0,'Cửa lớp đóng thì các bạn đang ở đâu?','0,1','Sân trường vắng vì đang trong giờ học.',''),
+Q('think','Bát cơm của Mèo đã hết sạch.|Mèo xoa bụng và cười.','Mèo vừa làm gì?','Vừa ăn xong|Vừa ngủ dậy|Vừa đi học về',0,'Bát cơm hết sạch nghĩa là Mèo vừa làm gì?','0,1','Mèo vừa ăn cơm xong.',''),
+Q('think','Cây trong chậu bị héo lá.|Đất trong chậu khô cong.','Cây đang cần gì?','Cần được tưới nước|Cần thêm lá|Cần chậu mới',0,'Đất khô cong thì cây đang thiếu thứ gì?','0,1','Cây đang cần được tưới nước.',''),
+Q('think','Thỏ đeo cặp và đi ra cửa.|Bây giờ là 7 giờ sáng thứ Hai.','Thỏ chuẩn bị đi đâu?','Đi học|Đi ngủ|Đi chợ',0,'Đeo cặp, 7 giờ sáng ngày thứ Hai. Bạn nghĩ Thỏ đi đâu?','0,1','Thỏ chuẩn bị đi học.',''),
+];
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PHẦN 3 — LOGIC GAME
+   ═══════════════════════════════════════════════════════════════════════ */
+let caseIdx = 0, sceneIdx = 0, solved = false;
+let clues = [], allSentences = [], soundOn = true;
+
+/* ── Chế độ chơi ──
+   'story'    = 2 vụ án có cốt truyện (đoạn văn cộng dồn, có câu suy luận nối manh mối)
+   'practice' = vòng luyện tập: 20 câu bốc ngẫu nhiên từ ngân hàng 100 câu    */
+let mode = 'story';
+let activeScenes = [];   // danh sách câu đang chơi
+let activeMeta = {};     // {name, endArt, endText}
+
+const ROUND_SIZE = 20;   // ⬅ số câu mỗi vòng. Bé mau mệt thì đổi xuống 10.
+
+function shuffle(arr){
+  const r = arr.slice();
+  for(let i = r.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = r[i]; r[i] = r[j]; r[j] = t;
+  }
+  return r;
+}
+
+// Bốc 20 câu cho một vòng. Game NHỚ câu đã ra ⇒ 5 vòng đầu bé gặp đủ 100 câu
+// khác nhau, không bị lặp. Hết 100 câu thì tự làm mới rồi bắt đầu lại.
+function pickRound(){
+  let seen = [];
+  try{ seen = JSON.parse(localStorage.getItem('tt_seen') || '[]'); }catch(e){ seen = []; }
+  if(!Array.isArray(seen)) seen = [];
+  let pool = BANK.map((_, i) => i).filter(i => seen.indexOf(i) < 0);
+  if(pool.length < ROUND_SIZE){ seen = []; pool = BANK.map((_, i) => i); }   // đã đi hết 100 câu → làm mới
+  const chosen = shuffle(pool).slice(0, ROUND_SIZE);
+  try{ localStorage.setItem('tt_seen', JSON.stringify(seen.concat(chosen))); }catch(e){}
+  return chosen.map(i => BANK[i]);
+}
+// Xáo trộn THỨ TỰ ĐÁP ÁN của một câu.
+// Vì sao cần: nếu đáp án đúng cứ hay rơi vào A hoặc B, bé sẽ học được "mẹo" đoán
+// theo vị trí thay vì đọc hiểu. Xáo trộn xong thì chỉ còn cách đọc mới trả lời được.
+// Hình minh hoạ của từng đáp án được chuyển theo cho khớp.
+function shuffleOptions(sc){
+  const idx = shuffle(sc.opts.map((_, i) => i));   // idx[vị trí mới] = vị trí cũ
+  return Object.assign({}, sc, {
+    opts:   idx.map(i => sc.opts[i]),
+    icons:  sc.icons ? idx.map(i => sc.icons[i]) : null,
+    answer: idx.indexOf(sc.answer),
+  });
+}
+
+// Số câu bé đã gặp, để hiện ở màn hình đầu
+function seenCount(){
+  try{ const s = JSON.parse(localStorage.getItem('tt_seen') || '[]'); return Array.isArray(s) ? s.length : 0; }
+  catch(e){ return 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ÂM THANH & NHẠC NỀN
+   Tất cả tự tạo bằng Web Audio + giọng đọc sẵn có của máy
+   ⇒ KHÔNG cần file nhạc, vẫn chạy offline, file vẫn nhẹ.
+
+   Có HAI nút tắt riêng, vì mỗi bé nhạy cảm với thứ khác nhau:
+     🎵 Nhạc nền  — nhạc vui chạy nền trong lúc chơi
+     🔔 Âm thanh  — tiếng khen / tiếng "ố ồ" / giọng đọc
+   Bé khó chịu với cái nào thì tắt riêng cái đó, không mất luôn cả hai.
+   Máy nhớ lựa chọn cho lần sau.
+
+   Âm lượng để nhỏ, sóng mềm (sine/triangle), lên xuống êm — không tiếng chói.
+   Nhạc nền tự nhỏ lại khi có tiếng khen hoặc giọng đọc, để nghe rõ lời.
+   ═══════════════════════════════════════════════════════════════════════ */
+const MUSIC_VOL = 0.12;      // độ to nhạc nền (0 = tắt, 1 = to nhất) — chỉnh ở đây nếu muốn to/nhỏ hơn
+const BEAT = 0.28;           // độ dài 1 phách (giây) — số nhỏ hơn = nhạc nhanh hơn
+
+let audioCtx = null, musicGain = null, sfxGain = null;
+let sfxOn = true, musicOn = true;
+let musicPlaying = false, musicNextAt = 0, musicTimer = null;
+
+function ensureCtx(){
+  if(audioCtx) return audioCtx;
+  try{
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    musicGain = audioCtx.createGain(); musicGain.gain.value = MUSIC_VOL; musicGain.connect(audioCtx.destination);
+    sfxGain   = audioCtx.createGain(); sfxGain.gain.value = 1;           sfxGain.connect(audioCtx.destination);
+  }catch(e){ audioCtx = null; }
+  return audioCtx;
+}
+
+// Nốt nhạc → tần số (Hz)
+const N = {
+  F4:349.23, A4:440.00, B4:493.88,
+  C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00, C6:1046.50,
+  C3:130.81, D3:146.83, F3:174.61, G3:196.00,
+};
+
+function note(freq, at, dur, vol, type, dest){
+  if(!audioCtx || !freq) return;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type || 'sine';
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0, at);
+  g.gain.linearRampToValueAtTime(vol, at + 0.025);      // vào êm
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur); // tắt dần, không cắt cụt
+  o.connect(g); g.connect(dest || sfxGain);
+  o.start(at); o.stop(at + dur + 0.04);
+}
+
+/* ── Bản nhạc nền: vui, nhẹ, lặp lại (khoảng 9 giây/vòng) ──
+   Mỗi phần tử = [tên nốt, số phách]. 0 = nghỉ. */
+const MELODY = [
+  ['C5',1],['E5',1],['G5',1],['E5',1],
+  ['F5',1],['E5',1],['D5',2],
+  ['D5',1],['F5',1],['A5',1],['F5',1],
+  ['E5',1],['D5',1],['C5',2],
+  ['E5',1],['G5',1],['E5',1],['C5',1],
+  ['D5',1],['F5',1],['D5',1],['B4',1],
+  ['C5',1],['E5',1],['G5',1],['A5',1],
+  ['G5',2],[0,2],
+];
+const BASS = [['C3',4],['F3',4],['D3',4],['G3',4],['C3',4],['G3',4],['C3',4],['G3',4]];
+const LOOP_BEATS = MELODY.reduce((s,[,b]) => s + b, 0);
+const LOOP_LEN = LOOP_BEATS * BEAT;
+
+function scheduleLoopAt(t0){
+  let t = t0;
+  MELODY.forEach(([n, b]) => {
+    if(n) note(N[n], t, b * BEAT * 0.92, 0.5, 'triangle', musicGain);  // triangle = tiếng tròn như sáo
+    t += b * BEAT;
+  });
+  t = t0;
+  BASS.forEach(([n, b]) => {
+    if(n) note(N[n], t, b * BEAT * 0.85, 0.4, 'sine', musicGain);
+    t += b * BEAT;
+  });
+}
+
+// Bộ lên lịch nhìn trước — nhạc chạy đều, không bị giật khi tab bận
+function musicTick(){
+  if(!musicPlaying || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  while(musicNextAt < now + 1.5){
+    scheduleLoopAt(Math.max(musicNextAt, now + 0.05));
+    musicNextAt = Math.max(musicNextAt, now + 0.05) + LOOP_LEN;
+  }
+  musicTimer = setTimeout(musicTick, 500);
+}
+function startMusic(){
+  if(!musicOn || musicPlaying || !ensureCtx()) return;
+  try{ audioCtx.resume(); }catch(e){}
+  musicPlaying = true;
+  musicNextAt = audioCtx.currentTime + 0.1;
+  musicTick();
+}
+function stopMusic(){
+  musicPlaying = false;
+  if(musicTimer){ clearTimeout(musicTimer); musicTimer = null; }
+  if(musicGain && audioCtx){
+    // tắt dần chứ không cắt phựt
+    const t = audioCtx.currentTime;
+    musicGain.gain.cancelScheduledValues(t);
+    musicGain.gain.setTargetAtTime(0, t, 0.15);
+    setTimeout(() => { if(!musicPlaying && musicGain) musicGain.gain.value = MUSIC_VOL; }, 900);
+  }
+}
+// Hạ nhạc nền xuống trong lúc có tiếng khen / giọng đọc, rồi trả lại như cũ
+function duck(ms){
+  if(!musicGain || !audioCtx || !musicPlaying) return;
+  const t = audioCtx.currentTime;
+  musicGain.gain.cancelScheduledValues(t);
+  musicGain.gain.setTargetAtTime(MUSIC_VOL * 0.22, t, 0.06);
+  musicGain.gain.setTargetAtTime(MUSIC_VOL, t + (ms || 1400) / 1000, 0.25);
+}
+
+/* ── Giọng đọc: dùng giọng tiếng Việt có sẵn trong máy ──
+   Máy KHÔNG có giọng tiếng Việt thì bỏ qua phần đọc (chữ vẫn hiện trên màn hình),
+   chứ không đọc tiếng Việt bằng giọng nước ngoài — nghe sai, bé khó hiểu. */
+let viVoice = null;
+function loadVoices(){
+  try{
+    const vs = window.speechSynthesis.getVoices() || [];
+    viVoice = vs.find(v => /^vi\b|^vi-/i.test(v.lang || '')) ||
+              vs.find(v => /vietnam/i.test((v.name || '') + (v.lang || ''))) || null;
+  }catch(e){ viVoice = null; }
+}
+if(typeof window !== 'undefined' && 'speechSynthesis' in window){
+  loadVoices();
+  try{ window.speechSynthesis.onvoiceschanged = loadVoices; }catch(e){}
+}
+function speak(text){
+  if(!sfxOn || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  if(!viVoice) return;
+  try{
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = viVoice; u.lang = viVoice.lang || 'vi-VN';
+    u.rate = 0.95; u.pitch = 1.12; u.volume = 1;   // hơi cao giọng cho vui tai, nói chậm vừa phải
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+/* ── Các tiếng trong game ── */
+// ĐÚNG: kèn chiến thắng đi lên + lời khen
+const CHEERS = ['Yeah! Bạn đã chiến thắng rồi!', 'Yeah! Bạn giỏi quá!', 'Tuyệt vời! Bạn đúng rồi!'];
+let cheerIdx = 0;
+function playCorrect(){
+  if(!sfxOn || !ensureCtx()) return;
+  const t = audioCtx.currentTime + 0.02;
+  [['C5',0],['E5',0.09],['G5',0.18],['C6',0.27]].forEach(([n,d]) => note(N[n], t+d, 0.32, 0.17, 'triangle'));
+  note(N.G5, t + 0.44, 0.45, 0.09, 'sine');
+  duck(1800);
+  speak(CHEERS[cheerIdx++ % CHEERS.length]);
+}
+// CHƯA ĐÚNG: "ố ồ" — hai nốt đi xuống, mềm, KHÔNG phải tiếng còi báo lỗi
+function playWrong(){
+  if(!sfxOn || !ensureCtx()) return;
+  const t = audioCtx.currentTime + 0.02;
+  note(N.A4, t,        0.22, 0.12, 'triangle');
+  note(N.F4, t + 0.20, 0.34, 0.11, 'triangle');
+  duck(1100);
+  speak('Ố ồ');
+}
+// XONG VỤ ÁN: kèn dài hơn + lời chúc mừng
+function playFinish(){
+  if(!sfxOn || !ensureCtx()) return;
+  const t = audioCtx.currentTime + 0.02;
+  [['C5',0],['E5',0.10],['G5',0.20],['C6',0.30],['G5',0.44],['C6',0.56]].forEach(([n,d]) =>
+    note(N[n], t+d, 0.36, 0.16, 'triangle'));
+  note(N.C6, t + 0.72, 0.9, 0.12, 'sine');
+  note(N.E5, t + 0.72, 0.9, 0.07, 'sine');
+  duck(2600);
+  speak('Chúc mừng bạn! Bạn là một thám tử tuyệt vời!');
+}
+
+/* ── Hai nút bật/tắt ── */
+function setSoundLabel(){
+  document.getElementById('soundIcon').textContent = sfxOn ? '🔔' : '🔕';
+  document.getElementById('soundText').textContent = 'Âm thanh: ' + (sfxOn ? 'Bật' : 'Tắt');
+  document.getElementById('musicIcon').textContent = musicOn ? '🎵' : '🔇';
+  document.getElementById('musicText').textContent = 'Nhạc: ' + (musicOn ? 'Bật' : 'Tắt');
+}
+function toggleSound(){
+  sfxOn = !sfxOn;
+  soundOn = sfxOn;
+  localStorage.setItem('tt_sound', sfxOn ? '1' : '0');
+  setSoundLabel();
+  if(sfxOn){ ensureCtx(); note(660, (audioCtx ? audioCtx.currentTime : 0) + 0.02, 0.18, 0.09, 'triangle'); }
+  else { try{ window.speechSynthesis.cancel(); }catch(e){} }
+}
+function toggleMusic(){
+  musicOn = !musicOn;
+  localStorage.setItem('tt_music', musicOn ? '1' : '0');
+  setSoundLabel();
+  if(musicOn) startMusic(); else stopMusic();
+}
+(function initSound(){
+  if(localStorage.getItem('tt_sound') === '0'){ sfxOn = false; soundOn = false; }
+  if(localStorage.getItem('tt_music') === '0') musicOn = false;
+  setSoundLabel();
+})();
+
+/* ── Nhân vật Kính Lúp ── */
+function magnifier(mood){
+  const glow = mood === 'happy';
+  const eye = glow
+    ? '<path d="M40 52 q6 -7 12 0" stroke="#2E3D50" stroke-width="4.5" fill="none" stroke-linecap="round"/>'
+      + '<path d="M62 52 q6 -7 12 0" stroke="#2E3D50" stroke-width="4.5" fill="none" stroke-linecap="round"/>'
+    : '<circle cx="46" cy="53" r="4.6" fill="#2E3D50"/><circle cx="68" cy="53" r="4.6" fill="#2E3D50"/>';
+  const mouth = glow
+    ? '<path d="M45 64 q12 13 24 0" stroke="#2E3D50" stroke-width="4.5" fill="none" stroke-linecap="round"/>'
+    : (mood === 'think'
+      ? '<path d="M48 68 q9 -5 18 0" stroke="#2E3D50" stroke-width="4.5" fill="none" stroke-linecap="round"/>'
+      : '<path d="M47 65 q10 9 20 0" stroke="#2E3D50" stroke-width="4.5" fill="none" stroke-linecap="round"/>');
+  return '<svg viewBox="0 0 120 120" width="100%" height="100%" role="img" aria-label="Nhân vật kính lúp">'
+    + '<rect x="72" y="78" width="15" height="34" rx="7.5" transform="rotate(-45 79 95)" fill="#B98A5E"/>'
+    + '<circle cx="57" cy="57" r="41" fill="' + (glow ? '#FFF6DC' : '#EAF2F8') + '" stroke="' + (glow ? '#E4B84D' : '#4B7BA8') + '" stroke-width="8"/>'
+    + (glow ? '<circle cx="57" cy="57" r="49" fill="none" stroke="#F2D89A" stroke-width="3" opacity=".85"/>' : '')
+    + eye + mouth + '</svg>';
+}
+document.getElementById('heroStart').innerHTML = magnifier('normal');
+
+// Ảnh bìa 2 vụ án ở màn hình đầu
+document.getElementById('coversBox').innerHTML = CASES.map(c =>
+  '<div class="cover"><div class="pic">' + ART[c.cover]() + '</div><div class="cap">' + c.name + '</div></div>').join('')
+  + '<div class="cover"><div class="pic">' + ART.topicThink() + '</div><div class="cap">Vòng luyện tập · ' + ROUND_SIZE + ' câu</div></div>';
+
+(function showModeHint(){
+  const el = document.getElementById('modeHint'); if(!el) return;
+  const left = Math.max(0, BANK.length - seenCount());
+  el.innerHTML = '<b>🔍 Vụ án có cốt truyện</b>: đọc truyện dài, có câu suy luận — 4 câu mỗi vụ.<br>'
+    + '<b>⭐ Vòng luyện tập</b>: ' + ROUND_SIZE + ' câu đố ngắn, xáo trộn mỗi lần chơi'
+    + (left > 0 ? ' — còn <b>' + left + '</b> câu bé chưa gặp trong tổng số ' + BANK.length + ' câu.'
+                : ' — bé đã đi hết ' + BANK.length + ' câu, vòng sau sẽ bắt đầu lại từ đầu.');
+})();
+
+function show(id){
+  ['screenStart','screenPlay','screenEnd'].forEach(s =>
+    document.getElementById(s).classList.toggle('hide', s !== id));
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+// Bấm nút ở màn hình đầu = thao tác cho phép phát tiếng (trình duyệt bắt buộc phải có)
+function unlockAudio(){
+  ensureCtx();
+  try{ if(audioCtx) audioCtx.resume(); }catch(e){}
+  startMusic();
+}
+function startGame(){          // 2 vụ án có cốt truyện
+  unlockAudio();
+  mode = 'story'; caseIdx = 0; newCase();
+}
+function startPractice(){      // vòng luyện tập: 20 câu xáo trộn
+  unlockAudio();
+  mode = 'practice';
+  activeScenes = pickRound().map(shuffleOptions);
+  activeMeta = { name:'Vòng luyện tập',
+                 endArt:'practiceDone',
+                 endText:'Bạn đã giải xong ' + ROUND_SIZE + ' câu đố. Nghỉ một chút rồi chơi vòng mới với những câu khác nhé!' };
+  resetRound();
+}
+function newCase(){            // bắt đầu 1 vụ án có cốt truyện
+  activeScenes = CASES[caseIdx].scenes.map(shuffleOptions);   // bản sao, KHÔNG sửa dữ liệu gốc
+  activeMeta = CASES[caseIdx];
+  resetRound();
+}
+function resetRound(){
+  sceneIdx = 0; clues = []; allSentences = [];
+  document.getElementById('storyBox').innerHTML = '';
+  show('screenPlay');
+  renderScene();
+}
+
+function renderScene(){
+  const sc = activeScenes[sceneIdx];
+  solved = false;
+
+  // Luyện tập: mỗi câu độc lập ⇒ xoá đoạn văn cũ, chỉ hiện đoạn của câu này
+  // (Vụ án có cốt truyện thì giữ lại đoạn cũ để bé đọc lại và nối manh mối.)
+  if(mode === 'practice'){
+    document.getElementById('storyBox').innerHTML = '';
+    allSentences = [];
+  }
+
+  // Hình minh hoạ của đoạn đang đọc (chỉ hiện 1 hình → không rối mắt)
+  document.getElementById('scenePic').innerHTML = ART[sc.art] ? ART[sc.art]() : '';
+
+  // Đoạn văn MỚI nối vào cuối; đoạn cũ vẫn còn để bé đọc lại
+  const box = document.getElementById('storyBox');
+  const p = document.createElement('p');
+  p.innerHTML = (sceneIdx > 0 && mode === 'story' ? '<span class="newtag">MỚI</span>' : '')
+    + sc.text.map(s => {
+        allSentences.push(s);
+        return '<span class="s" data-i="' + (allSentences.length-1) + '">' + s + '</span>';
+      }).join(' ');
+  box.appendChild(p);
+
+  document.getElementById('heroPlay').innerHTML = magnifier('think');
+  document.getElementById('questionBox').textContent = sc.q;
+
+  const opts = document.getElementById('optsBox');
+  opts.innerHTML = '';
+  sc.opts.forEach((text, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    const iconName = sc.icons ? sc.icons[i] : null;
+    const pic = (iconName && ICON[iconName]) ? '<span class="optpic">' + ICON[iconName]() + '</span>' : '';
+    b.innerHTML = '<span class="kbd">' + 'ABCD'[i] + '</span>' + pic + '<span>' + text + '</span>';
+    b.onclick = () => choose(i, b);
+    opts.appendChild(b);
+  });
+
+  const fb = document.getElementById('feedbackBox');
+  fb.className = 'feedback'; fb.textContent = '';
+  const nb = document.getElementById('nextBtn');
+  nb.classList.remove('show');
+  nb.textContent = (sceneIdx < activeScenes.length - 1) ? 'Tiếp theo →' : 'Xem kết quả →';
+
+  clearHighlight();
+  renderProgress();
+}
+
+function choose(i, btn){
+  if(solved) return;
+  const sc = activeScenes[sceneIdx];
+  const fb = document.getElementById('feedbackBox');
+
+  if(i === sc.answer){
+    solved = true;
+    btn.classList.add('correct'); btn.classList.remove('tried');
+    document.querySelectorAll('#optsBox .opt').forEach(b => b.disabled = true);
+    document.getElementById('heroPlay').innerHTML = magnifier('happy');
+    clearHighlight();
+    fb.className = 'feedback show ok';
+    fb.textContent = '✓ Đúng rồi! Bạn đọc rất kỹ.';
+    clues.push(sc.clue);
+    playCorrect();
+    document.getElementById('nextBtn').classList.add('show');
+    renderProgress();
+  } else {
+    // Chưa đúng: KHÔNG phạt, KHÔNG dấu X đỏ. Gợi ý + tô sáng câu cần đọc lại.
+    btn.classList.add('tried');
+    fb.className = 'feedback show hint';
+    fb.innerHTML = '💡 <b>Gần đúng rồi.</b> ' + sc.hint
+      + '<br><span style="font-weight:500">Câu cần đọc lại đang được tô màu vàng bên trái. Bạn thử chọn lại nhé.</span>';
+    highlight(sc.lit);
+    playWrong();   // "ố ồ" — hai nốt đi xuống, nhẹ nhàng
+  }
+}
+
+function highlight(list){
+  clearHighlight();
+  (list || []).forEach(i => {
+    const el = document.querySelector('.story .s[data-i="' + i + '"]');
+    if(el) el.classList.add('lit');
+  });
+  const first = document.querySelector('.story .s.lit');
+  if(first) first.scrollIntoView({behavior:'smooth', block:'center'});
+}
+function clearHighlight(){
+  document.querySelectorAll('.story .s.lit').forEach(el => el.classList.remove('lit'));
+}
+
+function renderProgress(){
+  const total = activeScenes.length, done = clues.length;
+  document.getElementById('progressLabel').textContent = (mode === 'practice')
+    ? ('Bạn đã làm được ' + done + '/' + total + ' câu')
+    : ('Bạn đã tìm được ' + done + '/' + total + ' gợi ý');
+  const dots = document.getElementById('dotsBox');
+  dots.className = 'dots' + (total > 8 ? ' many' : '');
+  dots.innerHTML = '';
+  for(let i = 0; i < total; i++){
+    const d = document.createElement('div');
+    d.className = 'dot' + (i < done ? ' done' : (i === sceneIdx && !solved ? ' now' : ''));
+    dots.appendChild(d);
+  }
+  // Luyện tập 20 câu thì chỉ hiện 3 dòng gần nhất, kẻo sổ tay quá dài
+  const shown = (mode === 'practice') ? clues.slice(-3) : clues;
+  const more = clues.length - shown.length;
+  document.getElementById('notebookBox').innerHTML = clues.length
+    ? '<b>📓 Sổ tay thám tử:</b>' + (more > 0 ? ' <span style="color:var(--ink3)">(và ' + more + ' dòng trước đó)</span>' : '')
+      + '<ul>' + shown.map(c => '<li>' + c + '</li>').join('') + '</ul>'
+    : '<b>📓 Sổ tay thám tử:</b> còn trống. Trả lời đúng để ghi vào đây nhé.';
+}
+
+function nextScene(){
+  if(sceneIdx < activeScenes.length - 1){
+    sceneIdx++;
+    renderScene();
+    document.getElementById('questionBox').scrollIntoView({behavior:'smooth', block:'center'});
+  } else {
+    endCase();
+  }
+}
+
+function endCase(){
+  const c = activeMeta;
+  document.getElementById('endArt').innerHTML = ART[c.endArt] ? ART[c.endArt]() : '';
+  document.getElementById('endTitle').textContent = 'Chúc mừng bạn! Bạn là một thám tử tuyệt vời!';
+  document.getElementById('endText').textContent = c.endText;
+  document.getElementById('endNotebook').innerHTML =
+    '<b>📓 Những điều bạn đã tìm được:</b><ul>' + clues.map(x => '<li>' + x + '</li>').join('') + '</ul>';
+
+  const btns = document.getElementById('endButtons');
+  btns.innerHTML = '';
+  const mkBtn = (cls, label, fn) => { const b = document.createElement('button'); b.className = cls; b.textContent = label; b.onclick = fn; btns.appendChild(b); };
+
+  if(mode === 'practice'){
+    mkBtn('btn2 primary', '⭐ Vòng mới (' + ROUND_SIZE + ' câu khác) →', () => startPractice());
+    mkBtn('btn2', '🔍 Chơi vụ án có cốt truyện', () => startGame());
+  } else {
+    const more = caseIdx < CASES.length - 1;
+    if(more) mkBtn('btn2 primary', 'Vụ án tiếp theo: ' + CASES[caseIdx+1].name + ' →', () => { caseIdx++; newCase(); });
+    mkBtn('btn2' + (more ? '' : ' primary'), '↻ Chơi lại vụ án này', () => newCase());
+    mkBtn('btn2', '⭐ Vòng luyện tập ' + ROUND_SIZE + ' câu', () => startPractice());
+  }
+
+  const home = document.createElement('button');
+  home.className = 'btn2';
+  home.textContent = '🏠 Về trang đầu';
+  home.onclick = () => show('screenStart');
+  btns.appendChild(home);
+
+  show('screenEnd');
+  playFinish();
+}
+</script>
+</body>
+</html>
