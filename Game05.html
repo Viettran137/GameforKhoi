@@ -115,8 +115,11 @@ svg{display:block}
 .listen .lv{width:80px; height:10px; background:#fff; border-radius:999px; overflow:hidden}
 .listen .lv span{display:block; height:100%; width:0; background:var(--ok); border-radius:999px; transition:width .08s}
 .stage{padding:18px; min-height:400px; position:relative; overflow:hidden}
-.parentok{position:fixed; right:16px; bottom:16px; z-index:50; background:var(--card); border:2px solid var(--ok); color:var(--ok);
-  border-radius:999px; padding:10px 18px; font-size:16px; font-weight:800; box-shadow:0 4px 14px rgba(46,61,80,.18)}
+.parentok{position:fixed; right:16px; bottom:16px; z-index:50; display:flex; gap:8px}
+.parentok button{background:var(--card); border:2px solid var(--ok); color:var(--ok); border-radius:999px; padding:10px 18px;
+  font-size:16px; font-weight:800; box-shadow:0 4px 14px rgba(46,61,80,.18)}
+.parentok #pbRetry{border-color:var(--hint); color:var(--hint)}
+#heardTxt{color:var(--ink); font-weight:800; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .toast{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:var(--ink); color:#fff; border-radius:14px;
   padding:10px 18px; font-size:15px; font-weight:700; z-index:60; max-width:90vw; text-align:center}
 
@@ -338,7 +341,7 @@ textarea{width:100%; min-height:80px; -webkit-user-select:text; user-select:text
     <div class="sect">TẤT CẢ TRÒ CHƠI</div>
     <div class="ggrid" id="gameGrid"></div>
     <div class="tip">👪 <b>Mẹo cho bố mẹ:</b> ngồi cạnh con, nói chậm, chờ con. Mỗi buổi chỉ 1–3 trò (5–10 phút).
-      Khi micro không nghe được mà con đã cố nói, hãy bấm nút <b>“👪 Con đã nói”</b> ở góc dưới.
+      Khi micro không nghe rõ, bố mẹ bấm <b>“👪 Đúng rồi”</b> hoặc <b>“↻ Nói lại”</b> ở góc dưới — bố mẹ là người chấm chính xác nhất.
       Muốn xem nhật ký: <b>giữ nút 👪 Bố mẹ 2 giây</b>.</div>
   </div>
 
@@ -354,7 +357,7 @@ textarea{width:100%; min-height:80px; -webkit-user-select:text; user-select:text
       <div class="bubble" role="status" aria-live="polite">
         <span id="bubbleText"></span>
         <button class="replay" id="replayBtn" aria-label="Nghe lại">🔊</button>
-        <div class="listen hide" id="listenPill">👂 Cú đang nghe <div class="lv"><span id="lvBar"></span></div></div>
+        <div class="listen hide" id="listenPill">👂 Cú đang nghe <div class="lv"><span id="lvBar"></span></div><span id="heardTxt"></span></div>
       </div>
     </div>
     <div class="card stage" id="stage"></div>
@@ -376,7 +379,7 @@ textarea{width:100%; min-height:80px; -webkit-user-select:text; user-select:text
   </div>
 
 </div>
-<button class="parentok hide" id="parentOK">👪 Con đã nói</button>
+<div class="parentok hide" id="parentBox"><button id="pbOk">👪 Con đã nói</button><button id="pbRetry" class="hide">↻ Nói lại</button></div>
 <div class="toast hide" id="toast"></div>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
@@ -405,6 +408,10 @@ const DEF = {
   muonLv:1,               // "Con muốn gì?": 1 chạm thẻ · 2 nói 1 từ · 3 nói cả câu
   nhinLv:0,               // "Cú nhìn gì?": 0 tự động · 1 · 2 · 3
   calm:false,             // tắt mọi chuyển động
+  check:'nhe',            // kiểm tra lời nói: 'off' mọi tiếng đều được · 'nhe' gần đúng là được · 'chat' phải đúng
+  tries:2,                // nói chưa đúng thì cho nói lại mấy lần (1–3)
+  voice:'',               // tên giọng đọc bố mẹ chọn ('' = tự chọn giọng tốt nhất)
+  rate:0.9,               // tốc độ đọc của Cú
   schedule:['bong','muon','luot'],
 };
 let S = Object.assign({}, DEF);
@@ -521,74 +528,153 @@ function face(em){
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   2. NHẠC + TIẾNG (engine giống Game 01–03, thêm "nín nhạc" khi Cú đang nghe)
+   2. NHẠC + TIẾNG — bản 2: KHÔNG GIẬT
+   Vì sao bản 1 bị giật, rè:
+   (1) nhạc được "đặt từng nốt" bằng setTimeout trên luồng chính → máy bận vẽ hình là trễ nốt, nghe khựng;
+   (2) nốt nào cũng tắt dần ngay từ đầu nên nghe lụp bụp;
+   (3) âm lượng nhạc bị kéo lên/xuống liên tục trên CÙNG một nút (nhỏ nhạc + tắt nhạc) → tiếng tách;
+   (4) micro bật kèm "khử tiếng vọng" → iPhone/iPad/Mac chuyển sang chế độ gọi điện, mọi âm thanh bị nén, rè.
+   Cách sửa:
+   • Dựng SẴN cả đoạn nhạc thành một băng âm thanh trong bộ nhớ (OfflineAudioContext) rồi phát lặp liền mạch
+     → không còn phụ thuộc đồng hồ của trang, máy có bận cũng không giật.
+   • Mỗi tiếng hiệu ứng cũng dựng sẵn. Nốt nhạc kiểu chuông gỗ: có độ vang, tắt mềm.
+   • 3 nút âm lượng riêng: nhạc · nhỏ nhạc khi Cú nói · tắt nhạc khi Cú nghe — không giành nhau.
+   • Bộ nén nhẹ ở cuối để không bao giờ bị vỡ tiếng.
+   • Micro chỉ mở đúng lúc Cú nghe rồi ĐÓNG ngay, không dùng khử tiếng vọng.
    ═══════════════════════════════════════════════════════════════════════ */
-const MUSIC_VOL = 0.10, BEAT = 0.30;
-let audioCtx = null, musicGain = null, sfxGain = null, sfxOn = true, musicOn = true;
-let musicPlaying = false, musicNextAt = 0, musicTimer = null, hushed = false;
+const MUSIC_VOL = 0.16;   // độ to nhạc nền (0 = tắt)
+const BEAT = 0.42;        // độ dài 1 phách (giây) — lớn hơn = chậm, êm hơn
+let audioCtx = null, master = null, musicGain = null, duckGain = null, hushGain = null, sfxGain = null;
+let sfxOn = true, musicOn = true, musicSrc = null, musicBuf = null, musicPlaying = false, hushed = false, renderP = null;
+const SFXBUF = {};
 function ensureCtx(){
   if(audioCtx) return audioCtx;
   try{
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    musicGain = audioCtx.createGain(); musicGain.gain.value = MUSIC_VOL; musicGain.connect(audioCtx.destination);
-    sfxGain = audioCtx.createGain(); sfxGain.gain.value = 1; sfxGain.connect(audioCtx.destination);
+    const AC = window.AudioContext || window.webkitAudioContext;
+    try{ audioCtx = new AC({ latencyHint:'playback' }); }catch(e){ audioCtx = new AC(); }
+    try{ if(navigator.audioSession) navigator.audioSession.type = 'playback'; }catch(e){}   // iPhone: vẫn có tiếng khi gạt nút im lặng
+    master = audioCtx.createDynamicsCompressor();
+    master.threshold.value = -16; master.knee.value = 12; master.ratio.value = 3; master.attack.value = 0.01; master.release.value = 0.25;
+    master.connect(audioCtx.destination);
+    musicGain = mkGain(MUSIC_VOL); duckGain = mkGain(1); hushGain = mkGain(1); sfxGain = mkGain(0.9);
+    musicGain.connect(duckGain); duckGain.connect(hushGain); hushGain.connect(master); sfxGain.connect(master);
+    prerender();
   }catch(e){ audioCtx = null; }
   return audioCtx;
 }
-const N = { C3:130.81, D3:146.83, F3:174.61, G3:196.00, A3:220.00, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
-  C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00, B5:987.77, C6:1046.50, D6:1174.66, E6:1318.51 };
-function note(freq, at, dur, vol, type, dest){
-  if(!audioCtx || !freq) return;
-  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-  o.type = type || 'sine'; o.frequency.value = freq;
-  g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(vol, at + 0.025); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-  o.connect(g); g.connect(dest || sfxGain); o.start(at); o.stop(at + dur + 0.04);
+function mkGain(v){ const g = audioCtx.createGain(); g.gain.value = v; return g; }
+function glide(param, v, tc){
+  if(!audioCtx) return; const t = audioCtx.currentTime;
+  try{ if(param.cancelAndHoldAtTime) param.cancelAndHoldAtTime(t); else { const cur = param.value; param.cancelScheduledValues(t); param.setValueAtTime(cur, t); } }catch(e){}
+  param.setTargetAtTime(v, t, tc);
 }
-// Nhạc nền: giai điệu ngũ cung chậm, nhẹ — khác Game 03 một chút cho dịu hơn
+const N = { C3:130.81, D3:146.83, E3:164.81, F3:174.61, G3:196.00, A3:220.00, C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
+  C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00, B5:987.77, C6:1046.50, D6:1174.66, E6:1318.51 };
+
+/* ── bộ tạo âm (dùng chung cho dựng sẵn và phát trực tiếp) ── */
+function tone(c, dest, f, at, dur, vol, o){
+  o = o || {};
+  const osc = c.createOscillator(), g = c.createGain();
+  osc.type = o.type || 'sine'; osc.frequency.setValueAtTime(f, at);
+  if(o.to) osc.frequency.exponentialRampToValueAtTime(o.to, at + dur);
+  const a = o.attack || 0.012;
+  g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(vol, at + a);
+  if(o.sustain){ g.gain.setTargetAtTime(vol * 0.75, at + a, dur * 0.4); g.gain.setTargetAtTime(0, at + dur, o.release || 0.25); }
+  else g.gain.setTargetAtTime(0, at + a, Math.max(0.04, dur / 3));
+  osc.connect(g); g.connect(dest); osc.start(at); osc.stop(at + dur + (o.release || 0.3) * 4 + 0.2);
+}
+/* chuông gỗ mềm: âm gốc + bồi âm nhỏ */
+function bell(c, dest, f, at, vol, dur){
+  dur = dur || 0.9;
+  tone(c, dest, f, at, dur, vol);
+  tone(c, dest, f * 2, at, dur * 0.5, vol * 0.18);
+  tone(c, dest, f * 3, at, dur * 0.25, vol * 0.05);
+}
+function impulse(c, sec){
+  const len = Math.floor(c.sampleRate * sec), b = c.createBuffer(2, len, c.sampleRate);
+  for(let ch = 0; ch < 2; ch++){ const d = b.getChannelData(ch); for(let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
+  return b;
+}
+function renderOC(oc){ return new Promise((ok, no) => { oc.oncomplete = e => ok(e.renderedBuffer); const p = oc.startRendering(); if(p && p.then) p.then(ok, no); }); }
+const OAC = () => window.OfflineAudioContext || window.webkitOfflineAudioContext;
+
+/* Nhạc nền: hát ru ngũ cung chậm, chuông gỗ + nền trầm giữ tiếng, có vang nhẹ */
 const MELODY = [['E5',2],['G5',1],['A5',1],['G5',2],['E5',2],['D5',1],['E5',1],['G5',2],[0,2],
   ['C5',2],['D5',1],['E5',1],['G5',2],['A5',2],['G5',1],['E5',1],['D5',2],[0,2]];
 const BASS = [['C3',4],['A3',4],['F3',4],['G3',4],['C3',4],['A3',4],['F3',4],['G3',4],['C3',4]];
-const LOOP_LEN = MELODY.reduce((s,p) => s + p[1], 0) * BEAT;
-function scheduleLoopAt(t0){
-  let t = t0; MELODY.forEach(p => { if(p[0]) note(N[p[0]], t, p[1]*BEAT*0.95, 0.45, 'triangle', musicGain); t += p[1]*BEAT; });
-  t = t0; BASS.forEach(p => { if(p[0]) note(N[p[0]], t, p[1]*BEAT*0.9, 0.35, 'sine', musicGain); t += p[1]*BEAT; });
+const LOOP_BEATS = MELODY.reduce((s, p) => s + p[1], 0), LOOP_LEN = LOOP_BEATS * BEAT;
+function scheduleLoop(c, dest, t0){
+  let t = t0; MELODY.forEach(p => { if(p[0]) bell(c, dest, N[p[0]], t, 0.32, p[1] * BEAT * 1.6); t += p[1] * BEAT; });
+  t = t0; BASS.forEach(p => { if(p[0] && t < t0 + LOOP_LEN){ tone(c, dest, N[p[0]], t, p[1] * BEAT * 0.9, 0.16, { sustain:true, attack:0.12, release:0.35 }); tone(c, dest, N[p[0]] * 1.5, t, p[1] * BEAT * 0.9, 0.05, { sustain:true, attack:0.2, release:0.35 }); } t += p[1] * BEAT; });
 }
-function musicTick(){
-  if(!musicPlaying || !audioCtx) return;
-  const now = audioCtx.currentTime;
-  while(musicNextAt < now + 1.5){ scheduleLoopAt(Math.max(musicNextAt, now + 0.05)); musicNextAt = Math.max(musicNextAt, now + 0.05) + LOOP_LEN; }
-  musicTimer = setTimeout(musicTick, 500);
+async function renderMusic(){
+  const sr = audioCtx.sampleRate, L = Math.ceil(sr * LOOP_LEN), oc = new (OAC())(2, L * 2, sr);
+  const lp = oc.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200;
+  const dry = oc.createGain(); dry.gain.value = 0.85; const wet = oc.createGain(); wet.gain.value = 0.3;
+  const rv = oc.createConvolver(); rv.buffer = impulse(oc, 1.8);
+  lp.connect(dry); dry.connect(oc.destination); lp.connect(rv); rv.connect(wet); wet.connect(oc.destination);
+  scheduleLoop(oc, lp, 0); scheduleLoop(oc, lp, LOOP_LEN);
+  const full = await renderOC(oc);
+  // lấy vòng THỨ HAI (đã có đuôi vang của vòng trước) → lặp lại không có chỗ nối
+  const buf = audioCtx.createBuffer(2, L, sr);
+  for(let ch = 0; ch < 2; ch++) buf.getChannelData(ch).set(full.getChannelData(ch).subarray(L, L * 2));
+  return buf;
 }
-function startMusic(){ if(!musicOn || musicPlaying || !ensureCtx()) return; try{ audioCtx.resume(); }catch(e){} musicPlaying = true; musicNextAt = audioCtx.currentTime + 0.1; musicTick(); }
-function stopMusic(){ musicPlaying = false; if(musicTimer){ clearTimeout(musicTimer); musicTimer = null; } if(musicGain){ const t = audioCtx.currentTime; musicGain.gain.cancelScheduledValues(t); musicGain.gain.setTargetAtTime(0, t, 0.15); setTimeout(() => { if(!musicPlaying && musicGain) musicGain.gain.value = hushed ? 0 : MUSIC_VOL; }, 900); } }
-function duck(ms){
-  if(!musicGain || !audioCtx || !musicPlaying || hushed) return;
-  const t = audioCtx.currentTime; musicGain.gain.cancelScheduledValues(t);
-  musicGain.gain.setTargetAtTime(MUSIC_VOL * 0.25, t, 0.06); musicGain.gain.setTargetAtTime(MUSIC_VOL, t + (ms || 1400)/1000, 0.3);
+/* Tiếng hiệu ứng — mọi tiếng đều mềm, không có tiếng còi báo lỗi */
+const PENTA = ['C5','D5','E5','G5','A5','C6','D6','E6'];
+const SFX = {
+  tap:    [0.5, (c, d, t) => bell(c, d, N.G5, t, 0.16, 0.4)],
+  yay:    [1.6, (c, d, t) => { [['C5',0],['E5',.1],['G5',.2],['C6',.32]].forEach(p => bell(c, d, N[p[0]], t + p[1], 0.2, 0.9)); }],
+  soft:   [1.0, (c, d, t) => { bell(c, d, N.A4, t, 0.14, 0.5); bell(c, d, N.F4, t + 0.22, 0.13, 0.7); }],
+  pop:    [0.5, (c, d, t) => { tone(c, d, 500, t, 0.12, 0.2, { to:1100 }); bell(c, d, N.C6, t + 0.06, 0.08, 0.3); }],
+  ring:   [1.3, (c, d, t) => { for(let k = 0; k < 2; k++){ bell(c, d, N.E5, t + k * 0.5, 0.12, 0.3); bell(c, d, N.C5, t + k * 0.5 + 0.2, 0.12, 0.3); } }],
+  connect:[0.8, (c, d, t) => { bell(c, d, N.C5, t, 0.13, 0.4); bell(c, d, N.G5, t + 0.13, 0.13, 0.5); }],
+  whoosh: [0.7, (c, d, t) => tone(c, d, 320, t, 0.4, 0.06, { to:900, attack:0.12 })],
+  finish: [2.4, (c, d, t) => { [['C5',0],['E5',.12],['G5',.24],['C6',.36],['G5',.52],['C6',.66]].forEach(p => bell(c, d, N[p[0]], t + p[1], 0.18, 1)); bell(c, d, N.E5, t + 0.85, 0.1, 1.4); bell(c, d, N.C6, t + 0.85, 0.12, 1.4); }],
+  breathIn: [4.2, (c, d, t) => { tone(c, d, N.C4, t, 3.4, 0.09, { sustain:true, attack:1.2, release:0.4 }); tone(c, d, N.G4, t, 3.4, 0.05, { sustain:true, attack:1.4, release:0.4 }); }],
+  breathOut:[4.2, (c, d, t) => { tone(c, d, N.G3, t, 3.4, 0.09, { sustain:true, attack:0.4, release:0.8 }); tone(c, d, N.D4, t, 3.4, 0.05, { sustain:true, attack:0.4, release:0.8 }); }],
+};
+PENTA.forEach((p, i) => SFX['block' + i] = [1.0, (c, d, t) => bell(c, d, N[p], t, 0.2, 0.8)]);
+async function renderSfx(k){
+  const sr = audioCtx.sampleRate, oc = new (OAC())(1, Math.ceil(sr * SFX[k][0]), sr);
+  SFX[k][1](oc, oc.destination, 0.005);
+  return renderOC(oc);
 }
-/* Khi Cú đang nghe con nói → nhạc tắt hẳn để micro không nghe nhầm tiếng nhạc */
-function hush(on){
-  hushed = on; if(!musicGain || !audioCtx) return;
-  const t = audioCtx.currentTime; musicGain.gain.cancelScheduledValues(t);
-  musicGain.gain.setTargetAtTime(on ? 0 : MUSIC_VOL, t, on ? 0.05 : 0.4);
+function prerender(){
+  if(renderP) return renderP;
+  renderP = (async () => {
+    try{ musicBuf = await renderMusic(); }catch(e){ musicBuf = null; }
+    if(musicPlaying && !musicSrc && musicBuf) playMusicBuf();
+    for(const k of Object.keys(SFX)){ try{ SFXBUF[k] = await renderSfx(k); }catch(e){} }
+  })();
+  return renderP;
 }
+function playMusicBuf(){
+  const s = audioCtx.createBufferSource(); s.buffer = musicBuf; s.loop = true; s.connect(musicGain);
+  musicGain.gain.setValueAtTime(0, audioCtx.currentTime); glide(musicGain.gain, MUSIC_VOL, 0.8);
+  s.start(); musicSrc = s;
+}
+function startMusic(){
+  if(!musicOn || musicPlaying || !ensureCtx()) return;
+  try{ audioCtx.resume(); }catch(e){}
+  musicPlaying = true; if(musicBuf && !musicSrc) playMusicBuf();   // chưa dựng xong thì prerender() tự phát khi xong
+}
+function stopMusic(){
+  musicPlaying = false; if(!musicSrc) return;
+  const s = musicSrc; musicSrc = null; glide(musicGain.gain, 0, 0.25);
+  setTimeout(() => { try{ s.stop(); }catch(e){} }, 1500);
+}
+/* Cú nói → nhạc nhỏ lại; nói xong → to dần lại */
+function duck(ms){ if(!duckGain) return; glide(duckGain.gain, 0.3, 0.08); clearTimeout(duck._t); duck._t = setTimeout(() => glide(duckGain.gain, 1, 0.5), ms || 1400); }
+/* Cú đang nghe con → nhạc tắt hẳn để micro không nghe nhầm */
+function hush(on){ hushed = on; if(hushGain) glide(hushGain.gain, on ? 0 : 1, on ? 0.05 : 0.6); }
 function sfx(kind, i){
   if(!sfxOn || !ensureCtx()) return;
-  const t = audioCtx.currentTime + 0.02;
-  if(kind === 'tap'){ note(N.G5, t, 0.12, 0.07, 'triangle'); }
-  if(kind === 'yay'){ [['C5',0],['E5',.09],['G5',.18],['C6',.27]].forEach(p => note(N[p[0]], t+p[1], 0.32, 0.15, 'triangle')); note(N.G5, t+.44, .45, .08, 'sine'); duck(1500); }
-  if(kind === 'soft'){ note(N.A4, t, 0.22, 0.10, 'triangle'); note(N.F4, t+0.2, 0.34, 0.09, 'triangle'); }   // "chưa đúng" — mềm, không phải còi báo lỗi
-  if(kind === 'pop'){ note(N.C6, t, 0.09, 0.12, 'sine'); note(N.G5, t+0.06, 0.18, 0.08, 'sine'); }
-  if(kind === 'ring'){ for(let k = 0; k < 2; k++){ note(N.E5, t + k*0.5, 0.18, 0.07, 'sine'); note(N.C5, t + k*0.5 + 0.2, 0.18, 0.07, 'sine'); } }
-  if(kind === 'connect'){ note(N.C5, t, 0.15, 0.08, 'sine'); note(N.G5, t+0.12, 0.25, 0.08, 'sine'); }
-  if(kind === 'block'){ const sc = ['C5','D5','E5','G5','A5','C6','D6','E6']; note(N[sc[(i||0) % sc.length]], t, 0.4, 0.13, 'triangle'); }
-  if(kind === 'whoosh'){ const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = 'sine';
-    o.frequency.setValueAtTime(300, t); o.frequency.exponentialRampToValueAtTime(900, t + 0.35);
-    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05, t + 0.1); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
-    o.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + 0.45); }
-  if(kind === 'finish'){ [['C5',0],['E5',.1],['G5',.2],['C6',.3],['G5',.44],['C6',.56]].forEach(p => note(N[p[0]], t+p[1], .36, .14, 'triangle')); note(N.C6, t+.72, .9, .1, 'sine'); note(N.E5, t+.72, .9, .06, 'sine'); duck(2600); }
-  if(kind === 'breathIn'){ note(N.C5, t, 3.4, 0.05, 'sine'); note(N.E5, t + 0.2, 3.2, 0.03, 'sine'); }
-  if(kind === 'breathOut'){ note(N.G4, t, 3.4, 0.05, 'sine'); note(N.C5, t + 0.2, 3.2, 0.03, 'sine'); }
+  const k = kind === 'block' ? 'block' + ((i || 0) % PENTA.length) : kind;
+  if(!SFX[k]) return;
+  if(SFXBUF[k]){ const s = audioCtx.createBufferSource(); s.buffer = SFXBUF[k]; s.connect(sfxGain); s.start(); }
+  else SFX[k][1](audioCtx, sfxGain, audioCtx.currentTime + 0.02);
+  if(k === 'yay' || k === 'finish') duck(k === 'finish' ? 2600 : 1500);
 }
 function setSoundLabel(){
   $('soundIcon').textContent = sfxOn ? '🔔' : '🔕'; $('soundText').textContent = 'Âm thanh: ' + (sfxOn ? 'Bật' : 'Tắt');
@@ -599,13 +685,24 @@ function toggleMusic(){ musicOn = !musicOn; try{ localStorage.setItem('k4_music'
 try{ if(localStorage.getItem('k4_sound') === '0') sfxOn = false; if(localStorage.getItem('k4_music') === '0') musicOn = false; }catch(e){}
 
 /* ═══════════════════════════════════════════════════════════════════════
-   3. GIỌNG ĐỌC — chỉ dùng giọng tiếng Việt có sẵn trong máy.
-      Không có giọng Việt → chữ vẫn hiện trong bóng nói, game chờ đủ lâu để bố mẹ đọc cho con.
+   3. GIỌNG ĐỌC — tự chọn giọng tiếng Việt TỐT NHẤT trong máy.
+      Thứ tự ưu tiên: giọng "Natural/Online" (Edge: HoaiMy, NamMinh) > "Nâng cao/Premium" (iPad: Linh nâng cao)
+      > Google > giọng thường. Bố mẹ đổi được trong Cài đặt. Không có giọng Việt thì không đọc (chữ vẫn hiện).
    ═══════════════════════════════════════════════════════════════════════ */
-let viVoice = null, lastLine = '';
+let viVoice = null, viVoices = [], lastLine = '';
+function voiceScore(v){
+  const n = (v.name || '') + ' ' + (v.voiceURI || ''); let s = 0;
+  if(/natural|neural|online/i.test(n)) s += 6;
+  if(/premium|enhanced|nâng cao|cao cấp/i.test(n)) s += 5;
+  if(/google/i.test(n)) s += 3;
+  if(/hoaimy|hoài my|linh/i.test(n)) s += 1;
+  return s;
+}
 function loadVoices(){
-  try{ const vs = speechSynthesis.getVoices() || [];
-    viVoice = vs.find(v => /^vi\b|^vi-/i.test(v.lang || '')) || vs.find(v => /vietnam/i.test((v.name || '') + (v.lang || ''))) || null;
+  try{
+    const vs = speechSynthesis.getVoices() || [];
+    viVoices = vs.filter(v => /^vi\b|^vi[-_]/i.test(v.lang || '') || /vietnam/i.test(v.name || '')).sort((a, b) => voiceScore(b) - voiceScore(a));
+    viVoice = viVoices.find(v => v.name === S.voice) || viVoices[0] || null;
   }catch(e){ viVoice = null; }
 }
 if('speechSynthesis' in window){ loadVoices(); try{ speechSynthesis.onvoiceschanged = loadVoices; }catch(e){} }
@@ -619,54 +716,79 @@ function speakP(text, o){
     let done = false; const fin = () => { if(done) return; done = true; owlTalking(false); res(); };
     try{
       const u = new SpeechSynthesisUtterance(clean);
-      u.voice = viVoice; u.lang = viVoice.lang || 'vi-VN'; u.rate = o.rate || 0.9; u.pitch = o.pitch || 1.1; u.volume = 1;
+      // cao độ để 1.0: đổi cao độ làm nhiều giọng máy bị méo/rè
+      u.voice = viVoice; u.lang = viVoice.lang || 'vi-VN'; u.rate = o.rate || S.rate || 0.9; u.pitch = o.pitch || 1; u.volume = 1;
       u.onend = fin; u.onerror = fin;
-      speechSynthesis.cancel();
-      owlTalking(!o.child); duck(clean.length * 95 + 700);
-      setTimeout(() => { try{ speechSynthesis.speak(u); }catch(e){ fin(); } }, 40);
-      setTimeout(fin, 2500 + clean.length * 120);
+      const busy = speechSynthesis.speaking || speechSynthesis.pending;
+      if(busy) speechSynthesis.cancel();
+      owlTalking(!o.child); duck(clean.length * 95 + 900);
+      setTimeout(() => { try{ speechSynthesis.resume(); speechSynthesis.speak(u); }catch(e){ fin(); } }, busy ? 120 : 10);
+      setTimeout(fin, 3000 + clean.length * 130);
     }catch(e){ fin(); }
   });
 }
 function owlTalking(on){ const m = $('owlMini'); if(m) m.classList.toggle('talking', on); }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   4. MICRO — chỉ đo "có tiếng nói hay không" + ghi âm để phát lại.
-      Không nhận dạng chữ (giọng trẻ em rất khó nhận, và mục tiêu là KHUYẾN KHÍCH nói).
+   4. MICRO — đo "có tiếng nói hay không" + ghi âm để phát lại.
+      Mở micro ĐÚNG lúc Cú nghe, đóng ngay sau đó → loa trở lại chất lượng bình thường.
    ═══════════════════════════════════════════════════════════════════════ */
-const Mic = { ok:false, tried:false, stream:null, an:null, buf:null, floor:0.006, cur:null, paused:false, rec:null, chunks:[], recT0:0, mime:'' };
-async function micInit(){
-  if(Mic.ok) return true;
-  if(Mic.tried) return false;
-  Mic.tried = true;
+const Mic = { ok:false, tried:false, stream:null, src:null, an:null, buf:null, floor:0.006, cur:null, paused:false, rec:null, chunks:[], recT0:0, mime:'', closeT:null };
+const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+async function micOpen(){
+  clearTimeout(Mic.closeT);
+  if(Mic.stream) return true;
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !ensureCtx()) return false;
   try{
-    Mic.stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:false } });
-    const src = audioCtx.createMediaStreamSource(Mic.stream);
-    Mic.an = audioCtx.createAnalyser(); Mic.an.fftSize = 1024; Mic.buf = new Uint8Array(Mic.an.fftSize); src.connect(Mic.an);
-    if(window.MediaRecorder){ for(const m of ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/aac']){ try{ if(MediaRecorder.isTypeSupported(m)){ Mic.mime = m; break; } }catch(e){} } }
-    Mic.ok = true;
-    const arr = []; for(let i = 0; i < 12; i++){ arr.push(micLevel()); await wait(40); }
-    arr.sort((a,b) => a - b); Mic.floor = Math.max(0.003, arr[6] || 0.006);
-    return true;
-  }catch(e){ return false; }
+    try{ if(navigator.audioSession) navigator.audioSession.type = 'play-and-record'; }catch(e){}
+    Mic.stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:true, autoGainControl:false, channelCount:1 } });
+    Mic.src = audioCtx.createMediaStreamSource(Mic.stream);
+    Mic.an = audioCtx.createAnalyser(); Mic.an.fftSize = 1024; Mic.buf = new Uint8Array(Mic.an.fftSize); Mic.src.connect(Mic.an);
+    if(!Mic.mime && window.MediaRecorder){ for(const m of ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/aac']){ try{ if(MediaRecorder.isTypeSupported(m)){ Mic.mime = m; break; } }catch(e){} } }
+    Mic.ok = true; return true;
+  }catch(e){ try{ if(navigator.audioSession) navigator.audioSession.type = 'playback'; }catch(_){} return false; }
+}
+function micClose(delay){
+  clearTimeout(Mic.closeT);
+  Mic.closeT = setTimeout(() => {
+    if(Mic.cur || !Mic.stream) return;
+    try{ Mic.stream.getTracks().forEach(t => t.stop()); }catch(e){} try{ Mic.src.disconnect(); }catch(e){}
+    Mic.stream = null; Mic.src = null; Mic.an = null;
+    try{ if(navigator.audioSession) navigator.audioSession.type = 'playback'; }catch(e){}
+  }, delay == null ? 1500 : delay);
+}
+async function micInit(){   // xin quyền 1 lần + đo tiếng ồn nền, rồi đóng micro
+  if(Mic.ok) return true; if(Mic.tried) return false; Mic.tried = true;
+  if(!(await micOpen())) return false;
+  const arr = []; for(let i = 0; i < 12; i++){ arr.push(micLevel()); await wait(40); }
+  arr.sort((a, b) => a - b); Mic.floor = Math.max(0.003, arr[6] || 0.006);
+  micClose(0); return true;
 }
 function micLevel(){ if(!Mic.an) return 0; Mic.an.getByteTimeDomainData(Mic.buf); let s = 0; for(let i = 0; i < Mic.buf.length; i++){ const v = (Mic.buf[i] - 128) / 128; s += v*v; } return Math.sqrt(s / Mic.buf.length); }
 function micThr(){ return Math.max(0.018, Mic.floor * 3) * ({ cao:0.7, vua:1, thap:1.45 }[S.sens] || 1); }
 const VOICE_MIN = 220, VOICE_SIL = 650, VOICE_MAX = 6000;   // ms: tiếng ngắn nhất được tính · im bao lâu là nói xong · dài nhất
-function micListen(c){
-  Mic.cur = c; Mic.paused = false; hush(true); $('listenPill').classList.remove('hide');
+async function micListen(c){
+  Mic.cur = c; Mic.paused = false;
+  if(!(await micOpen()) || c.done){ if(Mic.cur === c) Mic.cur = null; return; }
   if(c.o.record) recStart();
   let st = 0, aboveSince = 0, belowSince = 0, speechStart = 0;
   const tryEnd = now => {
     const dur = (belowSince || now) - speechStart;
     if(dur < VOICE_MIN){ st = 0; c.speaking = false; aboveSince = 0; return false; }
-    c.finishing = true;
-    recStop(speechStart, dur).then(rec => { c.finishing = false; answer('voice', null, { voiceMs:Math.round(dur), rec }); });
+    st = 2; c.finishing = true; c.voiceMs = Math.round(dur);
+    c.recP = recStop(speechStart, dur).then(rec => { c.rec = rec; c.finishing = false; return rec; });
+    c.recP.then(rec => {
+      if(c.done) return;
+      if(c.useSR && !SR.broken){
+        if(c.srAlts) srJudge(c);
+        else c.srWait = setTimeout(() => { if(!c.done && !c.srAlts) answer('voice', null, { voiceMs:c.voiceMs, rec, heard:[], q:'?', sr:true }); }, 2400);
+      } else answer('voice', null, { voiceMs:c.voiceMs, rec });
+    });
     return true;
   };
+  c.forceEnd = () => { if(st === 1) tryEnd(performance.now()); };
   const loop = () => {
-    if(Mic.cur !== c || c.done) return;
+    if(Mic.cur !== c || c.done || st === 2) return;
     const now = performance.now(), l = micLevel(), thr = micThr(), x = l / thr;
     $('lvBar').style.width = Math.min(100, x * 50) + '%';
     if(Mic.paused){ aboveSince = 0; if(st === 1){ st = 0; c.speaking = false; } requestAnimationFrame(loop); return; }
@@ -683,9 +805,9 @@ function micListen(c){
   };
   requestAnimationFrame(loop);
 }
-function micStop(){ Mic.cur = null; Mic.paused = false; recAbort(); hush(false); $('listenPill').classList.add('hide'); }
+function micStop(){ Mic.cur = null; Mic.paused = false; recAbort(); micClose(); }
 function recStart(){
-  if(!Mic.ok || !window.MediaRecorder) return;
+  if(!Mic.stream || !window.MediaRecorder) return;
   try{ Mic.chunks = []; Mic.rec = new MediaRecorder(Mic.stream, Mic.mime ? { mimeType:Mic.mime } : undefined);
     Mic.rec.ondataavailable = e => { if(e.data && e.data.size) Mic.chunks.push(e.data); };
     Mic.rec.start(); Mic.recT0 = performance.now(); }catch(e){ Mic.rec = null; }
@@ -706,11 +828,98 @@ async function playRec(rec, rate){
   try{
     if(!rec.buf){ const ab = await rec.blob.arrayBuffer(); rec.buf = await new Promise((ok, no) => audioCtx.decodeAudioData(ab, ok, no)); }
     const src = audioCtx.createBufferSource(); src.buffer = rec.buf; src.playbackRate.value = rate || 1;
-    const g = audioCtx.createGain(); g.gain.value = 1.8; src.connect(g); g.connect(audioCtx.destination);
+    const g = audioCtx.createGain(); g.gain.value = 1.8; src.connect(g); g.connect(master);
     const off = Math.min(rec.off || 0, Math.max(0, rec.buf.duration - 0.4)), d = Math.min(rec.dur || rec.buf.duration, rec.buf.duration - off);
     duck((d / (rate || 1)) * 1000 + 800);
     await new Promise(ok => { src.onended = ok; src.start(0, off, d); setTimeout(ok, (d / (rate || 1)) * 1000 + 700); });
   }catch(e){}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   4b. NGHE CHỮ — kiểm tra con nói ĐÚNG từ chưa (Nhận dạng giọng nói của trình duyệt, tiếng Việt)
+   • Chrome / Edge (máy tính, Android): tốt, cần internet. Safari iPad/iPhone: dùng nhận dạng của Apple.
+   • Không chấm khắt khe: so sánh cả khi THIẾU DẤU, sai một chữ cái → "gần đúng".
+   • Kết quả: 'dung' đúng · 'gan' gần đúng (đúng âm, sai dấu / thiếu chữ) · 'thu' chưa đúng · '?' chưa nghe rõ
+   ═══════════════════════════════════════════════════════════════════════ */
+const SRC = window.SpeechRecognition || window.webkitSpeechRecognition;
+const SR = { ok:!!SRC, broken:false, rec:null, cur:null, restarts:0, warned:false };
+const checking = () => S.check !== 'off';
+const srUsable = () => SR.ok && !SR.broken && checking() && !FAST && S.micMode !== 'parent';
+function heard(t){ const h = $('heardTxt'); if(h) h.textContent = t ? '“' + t + '”' : ''; }
+function srStart(c){
+  if(!srUsable() || c.done || SR.rec) return;
+  SR.cur = c;
+  let r; try{ r = new SRC(); }catch(e){ SR.broken = true; return; }
+  SR.rec = r; r.lang = 'vi-VN'; r.continuous = false; r.interimResults = true; r.maxAlternatives = 5;
+  r.onspeechstart = () => { if(SR.cur === c) c.speaking = true; };
+  r.onresult = e => {
+    if(SR.cur !== c || c.done) return;
+    let alts = [], fin = false, interim = '';
+    for(let i = e.resultIndex; i < e.results.length; i++){
+      const res = e.results[i];
+      if(res.isFinal){ fin = true; for(let k = 0; k < res.length; k++) if(res[k].transcript) alts.push(res[k].transcript); }
+      else interim += res[0].transcript;
+    }
+    if(interim) heard(interim);
+    if(fin && alts.length){ heard(alts[0]); c.srAlts = alts; srDone(c); }
+  };
+  r.onerror = e => {
+    if(['not-allowed','service-not-allowed','audio-capture','network','language-not-supported'].includes(e.error)){
+      SR.broken = true;
+      if(!SR.warned){ SR.warned = true; toast('Máy chưa nghe được chữ tiếng Việt (' + e.error + '). Bố mẹ dùng nút “Đúng rồi / Nói lại” nhé.', 5000); }
+    }
+  };
+  r.onend = () => {
+    if(SR.rec === r) SR.rec = null;
+    if(SR.cur === c && !c.srAlts) c.speaking = false;
+    if(SR.cur === c && !c.done && !c.srAlts && !Mic.paused && !SR.broken && SR.restarts++ < 40)
+      setTimeout(() => { if(SR.cur === c && !c.done && !Mic.paused && !c.srAlts) srStart(c); }, 200);
+  };
+  try{ r.start(); }catch(e){ SR.rec = null; }
+}
+function srHalt(){ const r = SR.rec; SR.rec = null; if(r){ try{ r.onend = null; r.onresult = null; r.abort(); }catch(e){} } }
+function srStop(){ srHalt(); SR.cur = null; }
+function srDone(c){
+  if(c.done) return;
+  if(!c.recP && c.forceEnd) c.forceEnd();         // đang ghi âm → chốt đoạn ghi luôn
+  if(!c.recP && Mic.rec && Mic.cur === c){ const now = performance.now(); c.recP = recStop(Mic.recT0 + 200, now - Mic.recT0 - 200).then(rec => { c.rec = rec; return rec; }); }
+  if(c.recP) c.recP.then(() => srJudge(c)); else srJudge(c);
+}
+function srJudge(c){
+  if(c.done) return; clearTimeout(c.srWait);
+  const j = judge(c.srAlts, c.o.expect, c.o.partial);
+  answer('voice', null, { heard:c.srAlts, q:j.q, h:j.h, e:j.e, voiceMs:c.voiceMs || 1000, rec:c.rec || null, sr:true });
+}
+/* ── so khớp tiếng Việt, khoan dung ── */
+function vnNorm(s){ return String(s || '').toLowerCase().normalize('NFC').replace(/[.,!?;:"“”'()…\-]/g, ' ').replace(/\s+/g, ' ').trim(); }
+function vnFlat(s){ return vnNorm(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd'); }
+function lev(a, b){
+  const m = a.length, n = b.length; if(!m) return n; if(!n) return m;
+  let prev = Array.from({ length:n + 1 }, (_, j) => j);
+  for(let i = 1; i <= m; i++){ const cur = [i]; for(let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j-1] + 1, prev[j-1] + (a[i-1] === b[j-1] ? 0 : 1)); prev = cur; }
+  return prev[n];
+}
+function judge(alts, expect, partial){
+  if(!expect || !expect.length) return { q:'dung', h:(alts && alts[0]) || '' };
+  if(!alts || !alts.length) return { q:'?', h:'' };
+  const rank = { dung:3, gan:2, thu:1 }; let best = { q:'thu', h:alts[0], s:0, e:null };
+  for(const a of alts) for(const e of expect){
+    const A = ' ' + vnNorm(a) + ' ', E = ' ' + vnNorm(e) + ' ', fa = vnFlat(a), fe = vnFlat(e);
+    let q = 'thu', s = 0;
+    if(A.includes(E)){ q = 'dung'; s = 1; }
+    else if((' ' + fa + ' ').includes(' ' + fe + ' ')){ q = 'gan'; s = 0.9; }      // đúng âm, sai/thiếu dấu
+    else {
+      const wa = fa.split(' '), we = fe.split(' '), ca = fa.replace(/ /g, ''), ce = fe.replace(/ /g, '');
+      const sw = 1 - lev(wa, we) / Math.max(wa.length, we.length);
+      const sc = 1 - lev([...ca], [...ce]) / Math.max(ca.length, ce.length, 1);
+      const ov = we.filter(w => wa.includes(w)).length / we.length;                 // bao nhiêu tiếng của câu mẫu có mặt
+      s = Math.max(sw, sc, ov * 0.9);
+      if(s >= 0.6) q = 'gan';
+    }
+    if(q === 'thu' && partial && partial.some(p => (' ' + fa + ' ').includes(' ' + vnFlat(p) + ' '))){ q = 'gan'; s = 0.7; }   // nói được từ chính
+    if(rank[q] > rank[best.q] || (q === best.q && s > best.s)) best = { q, h:a, s, e };
+  }
+  return best;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -738,49 +947,64 @@ async function recList(){ const db = await idb(); if(!db) return []; return new 
 async function recDel(id){ const db = await idb(); if(!db) return; try{ db.transaction('rec', 'readwrite').objectStore('rec').delete(id); }catch(e){} }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   6. KHUNG CHƠI CHUNG — hỏi / chờ / gợi ý tăng dần / ghi nhật ký
+   6. KHUNG CHƠI CHUNG — hỏi / chờ / gợi ý tăng dần / kiểm tra lời nói / ghi nhật ký
    ═══════════════════════════════════════════════════════════════════════ */
 let RUN = 0, CUR = null, G = null;
 const STOP = { stop:true };
 function screen(id){ ['screenHome','screenGame','screenEnd','screenParent'].forEach(s => $(s).classList.toggle('hide', s !== id)); window.scrollTo(0, 0); }
 function setBubble(text, mood){ $('bubbleText').textContent = text; lastLine = text; $('owlMini').innerHTML = owl(mood || ''); }
 async function say(text, mood){ setBubble(text, mood); await speakP(text); }
+/* Nút của bố mẹ: không kiểm tra → "👪 Con đã nói" · có kiểm tra → "👪 Đúng rồi" + "↻ Nói lại" */
+function parentBtns(on, judgeMode){
+  $('parentBox').classList.toggle('hide', !on);
+  $('pbOk').textContent = judgeMode ? '👪 Đúng rồi' : '👪 Con đã nói';
+  $('pbRetry').classList.toggle('hide', !judgeMode);
+}
 
 /* ask(): chờ con phản hồi.
-   o.voice  — nghe micro (và hiện nút 👪 cho bố mẹ)   o.record — ghi âm
+   o.voice  — nghe con nói      o.record — ghi âm      o.expect — các câu đúng (để kiểm tra chữ)
    o.hints  — các hàm gợi ý, gọi lần lượt sau mỗi S.waitSec giây im lặng
-   Hết gợi ý mà vẫn chưa có gì → trả về {type:'none'} và game tự đi tiếp nhẹ nhàng (không bao giờ kẹt). */
+   Hết gợi ý mà vẫn chưa có gì → {type:'none'} và game đi tiếp nhẹ nhàng (không bao giờ kẹt). */
 function ask(o){
   return new Promise(res => {
-    const c = CUR = { o, res, t0:performance.now(), prompt:0, done:false, speaking:false, paused:false };
-    const useMic = o.voice && Mic.ok && S.micMode !== 'parent';
-    if(o.voice) $('parentOK').classList.remove('hide');
+    const c = CUR = { o, res, t0:performance.now(), prompt:0, done:false, speaking:false };
+    c.useSR = !!(o.voice && o.expect && srUsable());
+    // Điện thoại/máy tính bảng: nghe chữ và ghi âm cùng lúc hay tranh micro → khi nghe chữ thì không ghi âm
+    const useMic = o.voice && Mic.ok && S.micMode !== 'parent' && !(c.useSR && IS_MOBILE);
+    if(o.voice) parentBtns(true, !!(o.expect && checking()));
+    if(o.voice && (useMic || c.useSR)){ $('listenPill').classList.remove('hide'); $('lvBar').style.width = '0'; heard(''); hush(true); }
     if(useMic) micListen(c);
+    if(c.useSR){ SR.restarts = 0; srStart(c); }
     (async () => {
       const hints = o.hints || [];
       for(let i = 0; i <= hints.length; i++){
         let t = 0; const W = (FAST ? 0.15 : S.waitSec) * 1000 * (i === hints.length ? 1.4 : 1);
         while(t < W){ await wait(150); if(c.done) return; if(!c.speaking && !c.finishing) t += 150; }
         if(c.done) return;
-        if(i < hints.length){ c.prompt = i + 1; Mic.paused = true; try{ await hints[i](); }catch(e){} await wait(250); Mic.paused = false; }
+        if(i < hints.length){
+          c.prompt = i + 1; Mic.paused = true; if(c.useSR) srHalt();      // Cú nói gợi ý → tạm không nghe để khỏi nghe nhầm giọng Cú
+          try{ await hints[i](); }catch(e){}
+          await wait(250); Mic.paused = false;
+          if(c.useSR && !c.done){ SR.restarts = 0; srStart(c); }
+        }
         else answer('none');
       }
     })();
   });
 }
 function answer(type, value, extra){
-  const c = CUR; if(!c || c.done) return; c.done = true; CUR = null;
-  micStop(); $('parentOK').classList.add('hide');
-  c.res(Object.assign({ type, value, prompt:c.prompt, ms:Math.round(performance.now() - c.t0) }, extra || {}));
+  const c = CUR; if(!c || c.done) return; c.done = true; CUR = null; clearTimeout(c.srWait);
+  micStop(); srStop(); parentBtns(false); $('listenPill').classList.add('hide'); hush(false);
+  c.res(Object.assign({ type, value, prompt:c.prompt, ms:Math.round(performance.now() - c.t0), sr:c.useSR }, extra || {}));
 }
-function stopAll(){ RUN++; if(CUR){ CUR.done = true; CUR = null; } micStop(); $('parentOK').classList.add('hide'); try{ speechSynthesis.cancel(); }catch(e){} owlTalking(false); }
+function stopAll(){ RUN++; if(CUR){ CUR.done = true; clearTimeout(CUR.srWait); CUR = null; } micStop(); srStop(); parentBtns(false); $('listenPill').classList.add('hide'); hush(false); try{ speechSynthesis.cancel(); }catch(e){} owlTalking(false); }
 function setDots(n){ const d = $('gDots'); d.innerHTML = ''; for(let i = 0; i < n; i++) d.appendChild(el('div', 'dot')); G.total = n; nowDot(0); }
 function nowDot(i){ [...$('gDots').children].forEach((x, k) => x.classList.toggle('now', k === i && !x.classList.contains('star') && !x.classList.contains('went'))); }
 function markDot(i, got){ const x = $('gDots').children[i]; if(!x) return; x.classList.remove('now'); x.classList.add(got ? 'star' : 'went'); G.stars[i] = got; nowDot(i + 1); }
 
 function ctx(rid){
   const chk = () => { if(rid !== RUN) throw STOP; };
-  return {
+  const g = {
     say: async (t, m) => { chk(); await say(T(t), m); chk(); },
     wait: async ms => { chk(); await wait(FAST ? Math.min(ms, 30) : ms); chk(); },
     ask: async o => { chk(); const r = await ask(o); chk(); return r; },
@@ -789,12 +1013,41 @@ function ctx(rid){
     star: (i, got) => markDot(i, got),
     alive: () => rid === RUN,
   };
+  /* askSay(): chờ con NÓI một câu mẫu và kiểm tra.
+     o.model — câu mẫu Cú làm mẫu · o.expect — các cách nói được coi là đúng · o.partial — từ chính (nói được là "gần đúng")
+     Mức kiểm tra (Cài đặt): 'off' mọi tiếng đều được · 'nhe' gần đúng là được · 'chat' phải đúng.
+     Chưa đúng → Cú làm mẫu lại, cho nói lại tối đa S.tries lần → rồi "mình cùng nói nhé" và đi tiếp (không bao giờ kẹt, không chê).
+     Kết quả có thêm: r.pass (đúng/được) · r.q (dung/gan/thu/?) · r.h (máy nghe được gì) · r.tries */
+  g.askSay = async o => {
+    const model = T(o.model || '');
+    let tries = 0;
+    while(true){
+      const hints = tries === 0 ? o.hints : [ () => g.say('Con nói: ' + model + '!') ];
+      const r = await g.ask(Object.assign({}, o, { voice:true, hints }));
+      r.tries = tries + 1;
+      if(r.type === 'none'){ r.pass = false; return r; }
+      if(r.type !== 'voice' && r.type !== 'parent'){ r.pass = true; return r; }           // chạm thẻ / chạm hình
+      if(!o.expect || !checking()){ r.pass = true; return r; }                               // không kiểm tra chữ
+      if(r.type === 'parent'){ r.q = r.q || 'dung'; }                                         // bố mẹ là người chấm chính xác nhất
+      else if(!r.sr){ r.q = '?'; r.pass = true; return r; }                                   // máy không nghe được chữ → chỉ biết con có nói
+      const pass = r.q === 'dung' || (r.q === 'gan' && S.check === 'nhe');
+      if(pass){ r.pass = true; if(r.q === 'gan') await g.say(cap(model) + '!', 'happy'); return r; }   // "gần đúng" → Cú nói lại cho chuẩn (nhắc mẫu, không chê)
+      tries++;
+      if(tries > S.tries){ await g.say('Mình cùng nói nhé: ' + model + '!', 'happy'); r.pass = false; return r; }
+      if(r.q === 'gan') await g.say('Gần đúng rồi! Nghe Cú nói nhé: ' + model + '. Con nói lại nào.', 'happy');
+      else if(r.q === '?') await g.say('Cú chưa nghe rõ. Con nói to hơn chút nhé: ' + model + '.', 'soft');
+      else await g.say('Con thử lại nhé. Nghe Cú nói: ' + model + '.', 'soft');
+    }
+  };
+  return g;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
    7. CHÍN TRÒ CHƠI
    Mỗi trò: Cú nói (chữ + giọng) → chờ con → gợi ý tăng dần → khen CỤ THỂ → ghi nhật ký
    ═══════════════════════════════════════════════════════════════════════ */
+
+const VQ = r => (r && r.q ? { q:r.q, h:r.h || '', n:r.tries || 1 } : {});   // chất lượng lời nói để ghi nhật ký
 
 /* ── 1. THỔI BÓNG BAY — con phát ra BẤT KỲ tiếng nào là bóng to lên và bay ── */
 async function gBong(g){
@@ -844,19 +1097,20 @@ async function gConvat(g){
     snd.textContent = a.snd.toUpperCase() + '!'; ani.classList.add('jump');
     await g.say(cap(a.n) + ' kêu: ' + a.snd + '!', 'happy');
     await g.say('Đến lượt {ten}: ' + a.snd + '!');
-    const r = await g.ask({ voice:true, record:true, hints:[
+    const r = await g.askSay({ record:true, model:a.snd, expect:[a.snd], partial:[one], hints:[
       () => g.say(cap(a.snd) + '! Con kêu giống ' + a.n + ' nhé.'),
       () => g.say('Con nói theo Cú: ' + one + '… ' + one + '!', 'happy'),
       async () => { tapOK = true; ani.classList.add('glow'); await g.say('Con chạm vào ' + a.n + ' cũng được.'); } ] });
     ani.classList.remove('glow');
-    const got = r.type !== 'none';
+    const got = r.type !== 'none' && r.pass;
     if(got){ ani.classList.remove('jump'); void ani.offsetWidth; ani.classList.add('dance'); sfx('yay'); }
-    if(r.type === 'voice' && r.rec){
+    if(got && r.type === 'voice' && r.rec){
       await g.say('Nghe nè, giọng của con đó!', 'happy'); await playRec(r.rec, 1); recSave(r.rec, 'convat', a.snd);
       await g.say(pick(['Con kêu giống ' + a.n + ' quá!', cap(a.n) + ' thích giọng của con lắm!']), 'happy');
     } else if(got){ await g.say(pick(['Hay quá! ' + cap(a.n) + ' kêu ' + a.snd + '!', 'Giỏi lắm! ' + cap(a.snd) + '!']), 'happy'); }
+    else if(r.type !== 'none') await g.say('Cảm ơn con đã cố gắng! Lần sau mình kêu tiếp nhé.', 'soft');
     else await g.say('Lần sau mình cùng kêu nhé. ' + cap(a.n) + ' kêu ' + a.snd + '.', 'soft');
-    g.log({ k:'imit', tgt:a.snd, r:r.type, p:r.prompt, ok:got, ms:r.ms, v:r.voiceMs || 0 });
+    g.log(Object.assign({ k:'imit', tgt:a.snd, r:r.type, p:r.prompt, ok:got, ms:r.ms, v:r.voiceMs || 0 }, VQ(r)));
     g.star(i, got);
     await g.wait(500);
   }
@@ -884,16 +1138,17 @@ async function gVet(g){
     await g.say('Con nói: ' + w + '!');
     let flap = () => { vet.innerHTML = parrot(true); setTimeout(() => { if(g.alive()) vet.innerHTML = parrot(false); }, 600); };
     vet.onclick = () => { flap(); };
-    const r = await g.ask({ voice:true, record:true, hints:[
+    const r = await g.askSay({ record:true, model:w, expect:[w], hints:[
       () => g.say(w + '! Vẹt đang chờ con đó.'),
       () => g.say('Con nói theo Cú nhé: ' + w + '.', 'happy') ] });
-    const got = r.type !== 'none';
-    if(r.type === 'voice' && r.rec){
+    const got = r.type !== 'none' && r.pass;
+    if(got && r.type === 'voice' && r.rec){
       await g.say('Vẹt nhại lại nè!', 'happy'); flap(); await playRec(r.rec, 1.45); flap(); recSave(r.rec, 'vet', w);
       await g.say(pick(['Hi hi! Vẹt nói giống con quá!', 'Con nói “' + w + '” rồi! Giỏi quá!']), 'happy');
-    } else if(got){ flap(); await speakP(w + '! ' + w + '!', { pitch:1.6, rate:1.05 }); await g.say('Con nói “' + w + '” rồi! Giỏi quá!', 'happy'); }
-    else { flap(); await speakP(w + '!', { pitch:1.6 }); await g.say('Vẹt nói “' + w + '”. Lần sau con nói cùng Vẹt nhé.', 'soft'); }
-    g.log({ k:'imit', tgt:w, r:r.type, p:r.prompt, ok:got, ms:r.ms, v:r.voiceMs || 0, choice:r1.type !== 'none' });
+    } else if(got){ flap(); await speakP(w + '! ' + w + '!', { pitch:1.25, rate:1.0 }); await g.say('Con nói “' + w + '” rồi! Giỏi quá!', 'happy'); }
+    else if(r.type !== 'none'){ flap(); await speakP(w + '!', { pitch:1.25 }); await g.say('Vẹt nói “' + w + '”. Con đã cố gắng, giỏi lắm!', 'soft'); }
+    else { flap(); await speakP(w + '!', { pitch:1.25 }); await g.say('Vẹt nói “' + w + '”. Lần sau con nói cùng Vẹt nhé.', 'soft'); }
+    g.log(Object.assign({ k:'imit', tgt:w, r:r.type, p:r.prompt, ok:got, ms:r.ms, v:r.voiceMs || 0, choice:r1.type !== 'none' }, VQ(r)));
     g.star(i, got);
     await g.wait(400);
   }
@@ -932,14 +1187,18 @@ async function gMuon(g){
     if(lv >= 2){
       const target = isMore ? 'Nữa' : (lv === 2 ? cap(IT[k].n) : 'Con muốn ' + IT[k].n);
       await g.say('Con nói nhé: ' + target + '!');
-      v = await g.ask({ voice:true, record:lv === 3, hints:[ () => g.say(target + '!'), () => g.say('Con nói theo Cú: ' + target + '.', 'happy') ] });
+      v = await g.askSay({ record:lv === 3, model:target,
+        expect: isMore ? ['nữa', 'thêm nữa'] : (lv === 2 ? [IT[k].n] : ['con muốn ' + IT[k].n]),
+        partial: (lv === 3 && !isMore) ? [IT[k].n] : null,
+        hints:[ () => g.say(target + '!'), () => g.say('Con nói theo Cú: ' + target + '.', 'happy') ] });
       if(v.rec) recSave(v.rec, 'muon', target);
     }
     basket.appendChild(el('div', 'bi popin', IT[k].s)); sfx('yay');
-    await g.say(v && v.type !== 'none' ? pick(['Con nói rồi! Đây, ' + IT[k].f + ' của con!', 'Cú nghe rồi! ' + cap(IT[k].f) + ' của con nè!'])
+    await g.say(v && v.pass ? pick(['Con nói rồi! Đây, ' + IT[k].f + ' của con!', 'Cú nghe rồi! ' + cap(IT[k].f) + ' của con nè!'])
                                        : pick(['Đây, ' + IT[k].f + ' của con!', 'Cú đưa con ' + IT[k].f + ' nè!']), 'happy');
-    g.log({ k:'mand', tgt:(isMore ? 'nữa' : IT[k].n), r:(v && v.type !== 'none') ? v.type : 'card', p:Math.max(r.prompt, v ? v.prompt : 0), ok:true, ms:r.ms, v:v ? (v.voiceMs || 0) : 0, lv });
-    g.star(i, true); lastK = k;
+    const okM = lv === 1 ? true : !!(v && v.pass);
+    g.log(Object.assign({ k:'mand', tgt:(isMore ? 'nữa' : IT[k].n), r:(v && v.type !== 'none') ? v.type : 'card', p:Math.max(r.prompt, v ? v.prompt : 0), ok:okM, ms:r.ms, v:v ? (v.voiceMs || 0) : 0, lv }, VQ(v)));
+    g.star(i, okM); lastK = k;
     await g.wait(400);
   }
 }
@@ -971,12 +1230,12 @@ async function gLuot(g){
     $('btnA').classList.remove('glow'); add();
     $('handA').classList.remove('hide');
     await g.say('Đẹp quá! Bây giờ con nói: Đến lượt {ban}!');
-    const r2 = await g.ask({ voice:true, hints:[
+    const r2 = await g.askSay({ model:'Đến lượt {ban}', expect:['đến lượt ' + S.partner, 'tới lượt ' + S.partner, 'lượt ' + S.partner], partial:[S.partner], hints:[
       () => { $('handA').classList.add('glow'); return g.say('Con bấm nút “Đến lượt {ban}” nhé.'); },
       () => g.say('Đến lượt {ban}!', 'happy') ] });
     $('handA').classList.remove('glow'); $('handA').classList.add('hide');
-    const gave = r2.type !== 'none';
-    g.log({ k:'turn', tgt:'đưa lượt', r:r2.type, p:r2.prompt, ok:gave, ms:r2.ms, v:r2.voiceMs || 0 });
+    const gave = r2.type !== 'none' && r2.pass;
+    g.log(Object.assign({ k:'turn', tgt:'đưa lượt', r:r2.type, p:r2.prompt, ok:gave, ms:r2.ms, v:r2.voiceMs || 0 }, VQ(r2)));
     setTurn('B'); impulses = 0;
     await g.say(gave ? 'Con đưa lượt rồi! Đến lượt {ban}. {ten} chờ nhé.' : 'Đến lượt {ban}. {ten} chờ nhé.');
     // Bố mẹ bấm "Đặt khối". Không có ai bấm thì Cú đặt giúp sau một lúc.
@@ -1073,10 +1332,10 @@ async function gCamxuc(g){
     let got = ok;
     if(sit){
       await g.say('Mình nói với bạn: ' + sit.say);
-      const v = await g.ask({ voice:true, hints:[ () => g.say('Con nói nhé: ' + sit.say, 'happy') ] });
-      if(v.type !== 'none'){ sfx('yay'); await g.say('Con nói hay quá! Bạn ấy thấy dễ chịu hơn rồi.', 'happy'); }
-      g.log({ k:'emp', tgt:sit.say, r:v.type, p:v.prompt, ok:v.type !== 'none', ms:v.ms, v:v.voiceMs || 0 });
-      got = got || v.type !== 'none';
+      const v = await g.askSay({ model:sit.say, expect:[sit.say], hints:[ () => g.say('Con nói nhé: ' + sit.say, 'happy') ] });
+      if(v.pass){ sfx('yay'); await g.say('Con nói hay quá! Bạn ấy thấy dễ chịu hơn rồi.', 'happy'); }
+      g.log(Object.assign({ k:'emp', tgt:sit.say, r:v.type, p:v.prompt, ok:!!v.pass, ms:v.ms, v:v.voiceMs || 0 }, VQ(v)));
+      got = got || !!v.pass;
     }
     g.star(i, got);
     await g.wait(500);
@@ -1107,9 +1366,9 @@ async function gHomnay(g){
   const sentence = 'Con thấy ' + EMO[e] + (why ? ' vì ' + why : '') + '.';
   g.stage.innerHTML = '<div style="width:110px;margin:0 auto 10px">' + face(e) + '</div><div class="strip"><div class="sw hl">' + esc(sentence) + '</div></div>';
   await g.say(sentence + ' Con nói cùng Cú nhé: ' + sentence);
-  const v = await g.ask({ voice:true, record:true, hints:[ () => g.say(sentence) ] });
+  const v = await g.askSay({ record:true, model:sentence, expect:[sentence], partial:[EMO[e]], hints:[ () => g.say(sentence) ] });
   if(v.rec) recSave(v.rec, 'homnay', sentence);
-  g.star(1, r2.type !== 'none' || v.type !== 'none');
+  g.star(1, r2.type !== 'none' || !!v.pass);
   if(v.type !== 'none'){ sfx('yay'); await g.say('Cảm ơn con đã kể cho Cú nghe.', 'happy'); }
   let act = null;
   if(neg){
@@ -1129,7 +1388,7 @@ async function gHomnay(g){
     await g.say('{ban} ơi, hôm nay ' + sentence.charAt(0).toLowerCase() + sentence.slice(1), 'happy');
   }
   LOG.feel.push({ d:Date.now(), e, why:why || '', act:act || '' }); saveLog();
-  g.log({ k:'feel', tgt:EMO[e] + (why ? ' · ' + why : ''), r:v.type !== 'none' ? v.type : 'card', p:Math.max(r1.prompt, r2.prompt), ok:true, ms:r1.ms, v:v.voiceMs || 0 });
+  g.log(Object.assign({ k:'feel', tgt:EMO[e] + (why ? ' · ' + why : ''), r:v.type !== 'none' ? v.type : 'card', p:Math.max(r1.prompt, r2.prompt), ok:true, ms:r1.ms, v:v.voiceMs || 0 }, VQ(v)));
   g.star(2, true);
 }
 async function breathe(g){
@@ -1144,13 +1403,13 @@ async function breathe(g){
 /* ── 9. ĐIỆN THOẠI CỦA CÚ — hội thoại có lượt lời, và quan trọng nhất: con HỎI LẠI Cú ── */
 async function gPhone(g){
   const turns = [
-    { tag:'chào', q:'A lô! Cú đây. Chào bạn!', cards:[['👋','Chào Cú!']], ack:() => 'Cú vui lắm khi nghe giọng bạn!' },
-    { tag:'tên', q:'Bạn tên là gì?', cards:[['🙋','Con tên là ' + S.name + '.']], ack:() => 'Tên ' + S.name + ' hay quá!' },
-    { tag:'ăn', q:'Hôm nay bạn ăn gì?', cards:[['🍚','Cơm'],['🍜','Phở'],['🥖','Bánh mì'],['🥛','Sữa']], ack:x => x ? 'Ồ, ' + x.toLowerCase() + '! Ngon quá!' : 'Nghe ngon quá!' },
+    { tag:'chào', q:'A lô! Cú đây. Chào bạn!', cards:[['👋','Chào Cú!']], extra:['chào', 'xin chào', 'a lô'], ack:() => 'Cú vui lắm khi nghe giọng bạn!' },
+    { tag:'tên', q:'Bạn tên là gì?', cards:[['🙋','Con tên là ' + S.name + '.']], extra:['tên là ' + S.name, S.name], ack:() => 'Tên ' + S.name + ' hay quá!' },
+    { tag:'ăn', open:true, q:'Hôm nay bạn ăn gì?', cards:[['🍚','Cơm'],['🍜','Phở'],['🥖','Bánh mì'],['🥛','Sữa']], ack:x => x ? 'Ồ, ' + x.toLowerCase() + '! Ngon quá!' : 'Nghe ngon quá!' },
     { tag:'hỏi lại', k:'ask', q:'Bây giờ bạn hỏi Cú đi!', cards:[['🍽️','Cú ăn gì?'],['❓','Cú đang làm gì?'],['💚','Cú có khoẻ không?']],
       ack:x => ({ 'Cú ăn gì?':'Cú ăn hạt và sâu nhỏ. Hi hi!', 'Cú đang làm gì?':'Cú đang nói chuyện với bạn nè!', 'Cú có khoẻ không?':'Cú khoẻ lắm, cảm ơn bạn đã hỏi!' }[x] || 'Bạn hỏi Cú rồi! Cú vui quá!') },
-    { tag:'chơi', q:'Còn bạn thì sao? Bạn thích chơi gì?', cards:[['⚽','Bóng'],['🚗','Xe'],['🧩','Xếp hình'],['🖍️','Vẽ']], ack:x => x ? 'Cú cũng thích ' + x.toLowerCase() + '!' : 'Hay quá!' },
-    { tag:'tạm biệt', q:'Cú phải đi rồi. Tạm biệt bạn nhé!', cards:[['👋','Tạm biệt Cú!']], ack:() => 'Tạm biệt! Mai mình nói chuyện tiếp nhé!' },
+    { tag:'chơi', open:true, q:'Còn bạn thì sao? Bạn thích chơi gì?', cards:[['⚽','Bóng'],['🚗','Xe'],['🧩','Xếp hình'],['🖍️','Vẽ']], ack:x => x ? 'Cú cũng thích ' + x.toLowerCase() + '!' : 'Hay quá!' },
+    { tag:'tạm biệt', q:'Cú phải đi rồi. Tạm biệt bạn nhé!', cards:[['👋','Tạm biệt Cú!']], extra:['tạm biệt', 'bai bai', 'bye bye'], ack:() => 'Tạm biệt! Mai mình nói chuyện tiếp nhé!' },
   ];
   setDots(turns.length + 1);
   g.stage.innerHTML = '<div class="phonewrap"><div class="phone" id="phone"><div class="screen">'
@@ -1173,18 +1432,20 @@ async function gPhone(g){
     ans.innerHTML = '';
     tu.cards.forEach(c => ans.appendChild(el('button', 'tcard', '<span class="em">' + c[0] + '</span>' + esc(c[1]), () => answer('card', c[1]))));
     msg('o', tu.q); await g.say(tu.q, 'happy');
-    const r = await g.ask({ voice:true, record:true, hints:[
+    const r = await g.askSay({ record:true, model:tu.cards[0][1],
+      expect: tu.open ? null : tu.cards.map(c => c[1]).concat(tu.extra || []), hints:[
       () => g.say(tu.k === 'ask' ? 'Con chọn một câu để hỏi Cú nhé.' : 'Con trả lời Cú nhé.'),
       () => { ans.firstChild.classList.add('glow'); return g.say('Con nói: ' + tu.cards[0][1]); } ] });
     [...ans.children].forEach(b => { b.disabled = true; b.classList.remove('glow'); });
     if(r.type === 'card'){ msg('c', r.value); await speakP(r.value, { pitch:1.35, child:true }); }
-    else if(r.type === 'voice' || r.type === 'parent'){ msg('c', '🎤 (con nói)'); if(r.rec){ await playRec(r.rec, 1); recSave(r.rec, 'dienthoai', tu.q); } }
+    else if(r.type === 'voice' || r.type === 'parent'){ msg('c', r.h ? '🎤 ' + r.h : '🎤 (con nói)'); if(r.rec && r.pass){ await playRec(r.rec, 1); recSave(r.rec, 'dienthoai', tu.q); } }
     else msg('c', '…');
-    const reply = tu.ack(r.type === 'card' ? r.value : null);
-    if(r.type !== 'none') sfx('pop');
+    const said = r.type === 'card' ? r.value : (r.pass ? (r.e || null) : (r.type !== 'none' ? tu.cards[0][1] : null));
+    const reply = tu.ack(said);
+    if(r.pass) sfx('pop');
     msg('o', reply); await g.say(reply, 'happy');
-    g.log({ k:tu.k || 'conv', tgt:tu.tag, r:r.type, p:r.prompt, ok:r.type !== 'none', ms:r.ms, v:r.voiceMs || 0 });
-    g.star(i + 1, r.type !== 'none');
+    g.log(Object.assign({ k:tu.k || 'conv', tgt:tu.tag, r:r.type, p:r.prompt, ok:!!r.pass, ms:r.ms, v:r.voiceMs || 0 }, VQ(r)));
+    g.star(i + 1, !!r.pass);
   }
   // 3. tắt máy
   ans.innerHTML = '';
@@ -1244,7 +1505,8 @@ $('doneBtn').onclick = async () => {
   await speakP('Con muốn nghỉ. Được nhé!');
   finishGame(true);
 };
-$('parentOK').onclick = () => { if(CUR && CUR.o.voice) answer('parent'); };
+$('pbOk').onclick = () => { if(CUR && CUR.o.voice) answer('parent', null, (CUR.o.expect && checking()) ? { q:'dung' } : {}); };
+$('pbRetry').onclick = () => { if(CUR && CUR.o.voice) answer('parent', null, { q:'thu' }); };
 $('replayBtn').onclick = async () => { if(!lastLine) return; const was = Mic.paused; Mic.paused = true; await speakP(lastLine); Mic.paused = was; };
 
 function finishGame(byBreak){
@@ -1319,6 +1581,7 @@ function dayStats(k){
   const ses = LOG.sessions.filter(s => dkey(s.s) === k);
   return { acts:acts.length, indep:acts.filter(t => !t.p).length, helped:acts.filter(t => t.p).length,
     voice:tr.filter(isVoice).length, vms:tr.reduce((n, t) => n + (t.v || 0), 0), none:tr.filter(t => t.r === 'none').length,
+    right:tr.filter(t => t.q === 'dung' || t.q === 'gan').length,
     mins:Math.round(ses.reduce((n, s) => n + Math.max(0, (s.e || s.s) - s.s), 0) / 60000), games:ses.length };
 }
 function pTong(p){
@@ -1342,7 +1605,8 @@ function pTong(p){
     ['🗣️','Lần đầu con tự phát ra tiếng (không cần gợi ý)', first(t => t.r === 'voice' && !t.p)],
     ['🦜','Lần đầu con bắt chước một âm / một từ', first(t => t.k === 'imit' && isVoice(t))],
     ['🙋','Lần đầu con dùng thẻ để xin đồ', first(t => t.k === 'mand' && t.r !== 'none')],
-    ['💬','Lần đầu con NÓI để xin đồ', first(t => t.k === 'mand' && isVoice(t))],
+    ['💬','Lần đầu con NÓI để xin đồ', first(t => t.k === 'mand' && isVoice(t) && t.ok)],
+    ['✅','Lần đầu máy nghe con nói ĐÚNG từ', first(t => t.r === 'voice' && t.q === 'dung')],
     ['➕','Lần đầu con xin “Nữa”', first(t => t.k === 'mand' && t.tgt === 'nữa')],
     ['👉','Lần đầu con tự đưa lượt cho người khác', first(t => t.k === 'turn' && t.r !== 'none' && !t.p)],
     ['👀','Lần đầu con nhìn theo mắt Cú ở cấp 3 (chỉ mắt)', first(t => t.k === 'ja' && t.lv === 3 && t.ok)],
@@ -1353,7 +1617,7 @@ function pTong(p){
   p.innerHTML = '<h3>Hôm nay (' + ddmm(today) + ')</h3><div class="kpis">'
     + '<div class="kpi g"><b>' + d.acts + '</b>lần giao tiếp</div>'
     + '<div class="kpi"><b>' + (d.acts ? Math.round(d.indep / d.acts * 100) : 0) + '%</b>con tự làm, không cần gợi ý</div>'
-    + '<div class="kpi p"><b>' + d.voice + '</b>lần con nói ra tiếng (' + (d.vms / 1000).toFixed(1) + ' giây)</div>'
+    + '<div class="kpi p"><b>' + d.voice + '</b>lần con nói ra tiếng · ' + d.right + ' lần nói đúng/gần đúng</div>'
     + '<div class="kpi h"><b>' + d.mins + '</b>phút chơi · ' + d.games + ' trò</div></div>'
     + '<h4>14 ngày gần nhất — số lần giao tiếp</h4><div class="legend"><span><i style="background:#5B9E7E"></i>Con tự làm</span><span><i style="background:#E4B84D"></i>Có gợi ý / làm mẫu</span></div>'
     + '<div class="chartbox">' + svg + '</div>'
@@ -1370,22 +1634,23 @@ function pTro(p){
     const last = ses.length ? new Date(ses[ses.length - 1].s).toLocaleDateString('vi-VN') : '—';
     const avgP = a.length ? (a.reduce((n, x) => n + (x.p || 0), 0) / a.length).toFixed(1) : '—';
     const recent = a.slice(-10), pct = recent.length ? Math.round(recent.filter(x => !x.p).length / recent.length * 100) + '%' : '—';
-    return '<tr><td><b>' + d.name + '</b><br><small style="color:var(--ink3)">' + d.goal + '</small></td><td>' + ses.length + '</td><td>' + a.length + '/' + t.length + '</td><td>' + pct + '</td><td>' + avgP + '</td><td>' + t.filter(isVoice).length + '</td><td>' + last + '</td></tr>';
+    return '<tr><td><b>' + d.name + '</b><br><small style="color:var(--ink3)">' + d.goal + '</small></td><td>' + ses.length + '</td><td>' + a.length + '/' + t.length + '</td><td>' + pct + '</td><td>' + avgP + '</td><td>' + t.filter(isVoice).length + '</td><td>' + t.filter(x => x.q === 'dung').length + ' / ' + t.filter(x => x.q === 'gan').length + '</td><td>' + last + '</td></tr>';
   }).join('');
   const waits = tr.filter(t => t.k === 'wait'), wOk = waits.filter(t => t.ok).length;
-  p.innerHTML = '<h3>Từng trò chơi</h3><div class="tblwrap"><table class="pt"><tr><th>Trò</th><th>Số buổi</th><th>Phản hồi / lượt</th><th>Tự làm (10 lượt gần nhất)</th><th>Mức gợi ý TB (0–3)</th><th>Lần nói</th><th>Lần cuối</th></tr>' + rows + '</table></div>'
+  p.innerHTML = '<h3>Từng trò chơi</h3><div class="tblwrap"><table class="pt"><tr><th>Trò</th><th>Số buổi</th><th>Phản hồi / lượt</th><th>Tự làm (10 lượt gần nhất)</th><th>Mức gợi ý TB (0–3)</th><th>Lần nói</th><th>Nói đúng / gần đúng</th><th>Lần cuối</th></tr>' + rows + '</table></div>'
     + '<h4>⏳ Chờ lượt (trò “Đến lượt ai?”)</h4><p>' + (waits.length ? 'Con chờ được mà không bấm sang lượt người khác: <b>' + wOk + '/' + waits.length + '</b> lần.' : 'Chưa có dữ liệu.') + '</p>'
     + '<p class="note">Mức gợi ý: 0 = con tự làm · 1 = Cú nhắc lại · 2 = Cú gợi rõ / làm sáng · 3 = Cú làm mẫu. Khi “tự làm” ổn định trên 80% qua 3 buổi, bố mẹ có thể tăng cấp (Cài đặt) hoặc giảm thời gian chờ.</p>';
 }
 function pNhatky(p){
   const ses = LOG.sessions.slice().reverse().slice(0, 40);
-  const R = { voice:'🎤 nói', parent:'👪 nói (bố mẹ xác nhận)', card:'🃏 chọn thẻ', tap:'👆 chạm', none:'— chưa phản hồi' };
+  const R = { voice:'🎤 nói', parent:'👪 nói (bố mẹ chấm)', card:'🃏 chọn thẻ', tap:'👆 chạm', none:'— chưa phản hồi' };
+  const Q = { dung:'✅ đúng', gan:'🟡 gần đúng', thu:'🔁 chưa đúng', '?':'(máy không nghe được chữ)' };
   p.innerHTML = '<h3>Nhật ký từng buổi</h3><p class="note">40 buổi gần nhất. Mỗi dòng là một lượt.</p>'
     + (ses.length ? ses.map(s => {
       const d = gameById(s.g);
       return '<h4>' + new Date(s.s).toLocaleDateString('vi-VN') + ' ' + hhmm(s.s) + ' · ' + (d ? d.name : s.g) + (s.fin ? '' : ' (dừng giữa chừng)') + '</h4>'
         + (s.tr.length ? '<div class="tblwrap"><table class="pt"><tr><th>Giờ</th><th>Kỹ năng</th><th>Mục tiêu</th><th>Con phản hồi</th><th>Gợi ý</th><th>Chờ</th></tr>'
-        + s.tr.map(t => '<tr><td>' + hhmm(t.at) + '</td><td>' + (SKILL[t.k] || t.k) + '</td><td>' + esc(t.tgt || '') + '</td><td>' + (R[t.r] || t.r) + (t.v ? ' · ' + (t.v / 1000).toFixed(1) + 's' : '') + (t.err ? ' · chọn nhầm ' + t.err : '') + (t.imp ? ' · bấm sớm ' + t.imp : '') + '</td><td>' + (t.p || 0) + '</td><td>' + (t.ms ? (t.ms / 1000).toFixed(1) + 's' : '') + '</td></tr>').join('') + '</table></div>' : '<p class="note">Không có lượt nào.</p>');
+        + s.tr.map(t => '<tr><td>' + hhmm(t.at) + '</td><td>' + (SKILL[t.k] || t.k) + '</td><td>' + esc(t.tgt || '') + '</td><td>' + (R[t.r] || t.r) + (t.q ? ' · ' + (Q[t.q] || t.q) : '') + (t.h ? ' · nghe: “' + esc(t.h) + '”' : '') + (t.n > 1 ? ' · ' + t.n + ' lần nói' : '') + (t.v ? ' · ' + (t.v / 1000).toFixed(1) + 's' : '') + (t.err ? ' · chọn nhầm ' + t.err : '') + (t.imp ? ' · bấm sớm ' + t.imp : '') + '</td><td>' + (t.p || 0) + '</td><td>' + (t.ms ? (t.ms / 1000).toFixed(1) + 's' : '') + '</td></tr>').join('') + '</table></div>' : '<p class="note">Không có lượt nào.</p>');
     }).join('') : '<p>Chưa có buổi chơi nào.</p>');
 }
 function pCamxuc(p){
@@ -1413,6 +1678,8 @@ function pCai(p){
     + '<div class="frow"><label>Tên của con<small>Cú sẽ gọi con bằng tên này</small></label><input type="text" id="sName" value="' + esc(S.name) + '" maxlength="20"></div>'
     + '<div class="frow"><label>Người chơi cùng<small>Dùng trong “Đến lượt ai?”, “Hôm nay con thấy thế nào?”</small></label><input type="text" id="sPartner" value="' + esc(S.partner) + '" maxlength="20"></div>'
     + '<div class="frow"><label>Cách nghe con nói<small>Micro chỉ nghe “có tiếng hay không”, không chấm đúng sai</small></label><select id="sMic">' + opt(S.micMode, [['auto','Micro + nút 👪 cho bố mẹ'],['parent','Chỉ nút 👪 (không dùng micro)']]) + '</select></div>'
+    + '<div class="frow"><label>Kiểm tra con nói đúng chưa<small>' + (SR.ok ? '✅ Trình duyệt này nghe được chữ tiếng Việt (Chrome/Edge cần internet; tiếng nói được gửi tới dịch vụ nhận dạng của trình duyệt). Giọng trẻ nhỏ đôi khi máy nghe nhầm — vì vậy nên để mức “Nhẹ”.' : '⚠️ Trình duyệt này không có nhận dạng giọng nói. Dùng Chrome hoặc Edge, hoặc bố mẹ chấm bằng nút “👪 Đúng rồi / ↻ Nói lại”.') + '</small></label><select id="sCheck">' + opt(S.check, [['off','Tắt — mọi tiếng nói đều được'],['nhe','Nhẹ — gần đúng là được (khuyên dùng)'],['chat','Chặt — phải đúng từ']]) + '</select></div>'
+    + '<div class="frow"><label>Nói chưa đúng thì cho nói lại<small>Sau số lần này Cú nói cùng con rồi đi tiếp — con không bao giờ bị kẹt</small></label><select id="sTries">' + opt(S.tries, [[1,'1 lần'],[2,'2 lần'],[3,'3 lần']]) + '</select></div>'
     + '<div class="frow"><label>Độ nhạy micro<small>Phòng ồn → Thấp · Con nói nhỏ → Cao</small></label><select id="sSens">' + opt(S.sens, [['thap','Thấp'],['vua','Vừa'],['cao','Cao']]) + '</select></div>'
     + '<div class="frow"><label>Chờ trước khi gợi ý<small>Nhiều trẻ cần 5–10 giây để phản hồi. Đừng giảm quá sớm.</small></label><select id="sWait">' + opt(S.waitSec, [[3,'3 giây'],[5,'5 giây'],[8,'8 giây'],[12,'12 giây']]) + '</select></div>'
     + '<div class="frow"><label>Số lượt mỗi trò</label><select id="sTrials">' + opt(S.trials, [[4,'4 lượt'],[6,'6 lượt'],[8,'8 lượt']]) + '</select></div>'
@@ -1420,16 +1687,20 @@ function pCai(p){
     + '<div class="frow"><label>Cấp “Cú đang nhìn gì?”</label><select id="sNhin">' + opt(S.nhinLv, [[0,'Tự động lên/xuống'],[1,'1 — mắt + cánh + đồ vật sáng'],[2,'2 — mắt + cánh'],[3,'3 — chỉ ánh mắt']]) + '</select></div>'
     + '<div class="frow"><label>Tắt mọi chuyển động<small>Cho bé nhạy cảm thị giác</small></label><input type="checkbox" id="sCalm"' + (S.calm ? ' checked' : '') + '></div>'
     + '<div class="frow"><label>Lịch hôm nay<small>Chọn 1–4 trò, theo thứ tự bấm</small></label><div class="chk" id="sSched">' + GAMES.map(d => '<label><input type="checkbox" value="' + d.id + '"' + (S.schedule.includes(d.id) ? ' checked' : '') + '> ' + d.name + '</label>').join('') + '</div></div>'
-    + '<div class="frow"><label>Giọng đọc tiếng Việt<small>' + (viVoice ? '✅ Có: ' + esc(viVoice.name) : '⚠️ Máy chưa có giọng tiếng Việt. iPad/iPhone: Cài đặt › Trợ năng › Nội dung được đọc › Giọng nói › Tiếng Việt. Android: cài “Dịch vụ lời nói của Google” + tiếng Việt. Khi chưa có, bố mẹ đọc chữ trong bóng nói cho con.') + '</small></label><button class="smallbtn" id="tVoice">🔊 Thử giọng</button></div>'
+    + '<div class="frow"><label>Giọng đọc của Cú<small>Giọng có chữ “Natural/Online” (trình duyệt Edge) hoặc “Nâng cao” (iPad) nghe tự nhiên, rõ hơn nhiều.</small></label><select id="sVoice">' + (viVoices.length ? opt(S.voice, [['','Tự chọn giọng tốt nhất']].concat(viVoices.map(v => [v.name, v.name]))) : '<option value="">(chưa có giọng tiếng Việt)</option>') + '</select></div>'
+    + '<div class="frow"><label>Tốc độ đọc</label><select id="sRate">' + opt(S.rate, [[0.8,'Chậm'],[0.9,'Vừa'],[1,'Bình thường']]) + '</select></div>'
+    + '<div class="frow"><label>Giọng đọc tiếng Việt<small>' + (viVoice ? '✅ Đang dùng: ' + esc(viVoice.name) : '⚠️ Máy chưa có giọng tiếng Việt. iPad/iPhone: Cài đặt › Trợ năng › Nội dung được đọc › Giọng nói › Tiếng Việt. Android: cài “Dịch vụ lời nói của Google” + tiếng Việt. Khi chưa có, bố mẹ đọc chữ trong bóng nói cho con.') + '</small></label><button class="smallbtn" id="tVoice">🔊 Thử giọng</button></div>'
     + '<div class="frow"><label>Kiểm tra micro<small id="micInfo">' + (Mic.ok ? '✅ Micro đã bật' : 'Bấm để thử') + '</small></label><button class="smallbtn" id="tMic">🎤 Thử micro</button></div>'
     + '<h4>Dữ liệu</h4><div class="chk"><button class="smallbtn" id="xJson">⬇ Tải nhật ký (JSON)</button><button class="smallbtn" id="xCsv">⬇ Tải bảng lượt chơi (CSV – mở bằng Excel)</button><button class="smallbtn red" id="xClear">Xoá toàn bộ nhật ký</button></div>'
     + '<p class="note">Mọi dữ liệu chỉ lưu trong trình duyệt của máy này. Xoá dữ liệu trình duyệt sẽ mất nhật ký — nên tải về định kỳ để gửi chuyên viên.</p>';
   const upd = () => {
     S.name = $('sName').value.trim() || 'con'; S.partner = $('sPartner').value.trim() || 'Mẹ';
     S.micMode = $('sMic').value; S.sens = $('sSens').value; S.waitSec = +$('sWait').value; S.trials = +$('sTrials').value;
-    S.muonLv = +$('sMuon').value; S.nhinLv = +$('sNhin').value; S.calm = $('sCalm').checked; saveS();
+    S.muonLv = +$('sMuon').value; S.nhinLv = +$('sNhin').value; S.calm = $('sCalm').checked;
+    S.check = $('sCheck').value; S.tries = +$('sTries').value; S.voice = $('sVoice').value; S.rate = +$('sRate').value;
+    saveS(); loadVoices();
   };
-  ['sName','sPartner','sMic','sSens','sWait','sTrials','sMuon','sNhin','sCalm'].forEach(id => $(id).onchange = upd);
+  ['sName','sPartner','sMic','sSens','sWait','sTrials','sMuon','sNhin','sCalm','sCheck','sTries','sVoice','sRate'].forEach(id => $(id).onchange = upd);
   $('sSched').querySelectorAll('input').forEach(c => c.onchange = () => {
     if(c.checked){ if(S.schedule.length >= 4){ c.checked = false; toast('Tối đa 4 trò mỗi ngày.'); return; } S.schedule.push(c.value); }
     else S.schedule = S.schedule.filter(x => x !== c.value);
@@ -1437,10 +1708,10 @@ function pCai(p){
   });
   $('tVoice').onclick = () => { ensureCtx(); speakP('Chào ' + S.name + '! Mình là bạn Cú.'); };
   $('tMic').onclick = async () => {
-    const ok = await micInit(); const info = $('micInfo');
+    await micInit(); const ok = await micOpen(); const info = $('micInfo');
     if(!ok){ info.textContent = '❌ Không mở được micro. Kiểm tra quyền micro của trình duyệt (trang phải chạy bằng https).'; return; }
     info.textContent = 'Con nói thử… (5 giây)'; const t0 = performance.now(); let peak = 0;
-    const lp = () => { const x = micLevel() / micThr(); peak = Math.max(peak, x); info.textContent = '🎤 ' + '▮'.repeat(Math.min(20, Math.round(x * 5))) + (x > 1 ? '  ← nghe thấy!' : ''); if(performance.now() - t0 < 5000) requestAnimationFrame(lp); else info.textContent = peak > 1 ? '✅ Micro nghe tốt.' : '⚠️ Chưa nghe rõ — thử độ nhạy “Cao”.'; };
+    const lp = () => { const x = micLevel() / micThr(); peak = Math.max(peak, x); info.textContent = '🎤 ' + '▮'.repeat(Math.min(20, Math.round(x * 5))) + (x > 1 ? '  ← nghe thấy!' : ''); if(performance.now() - t0 < 5000) requestAnimationFrame(lp); else { micClose(0); } if(performance.now() - t0 >= 5000) info.textContent = peak > 1 ? '✅ Micro nghe tốt.' : '⚠️ Chưa nghe rõ — thử độ nhạy “Cao”.'; };
     lp();
   };
   const dl = (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
