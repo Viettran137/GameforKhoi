@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cùng nói chuyện với Cú</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   CÙNG NÓI CHUYỆN VỚI CÚ — Game 04
+   9 trò chơi nhỏ tập GIAO TIẾP cho bé tự kỷ / chậm giao tiếp xã hội.
+   Cùng nền với Game 01–03 (bạn Cú, màu dịu, 2 nút tắt nhạc/tiếng).
+
+   Nguyên tắc thiết kế (xem thêm file Game04-GDD.md):
+   • MỌI cố gắng giao tiếp đều được thưởng — không chấm phát âm đúng/sai
+   • Không đồng hồ, không đếm ngược. Gợi ý tăng dần (chờ → gợi nhẹ → làm mẫu)
+     và KHÔNG BAO GIỜ bị kẹt: hết gợi ý thì Cú làm cùng con
+   • Luôn biết còn bao nhiêu lượt (chấm tròn) · luôn có nút "✋ Xong rồi"
+   • Micro chỉ đo "con có phát ra tiếng không" + ghi âm để phát lại cho con nghe.
+     Có nút "👪 Con đã nói" cho bố mẹ khi micro không nghe rõ.
+   • Nhật ký cho bố mẹ: giữ nút 👪 2 giây để mở.
+   ═══════════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#FBF6EE; --card:#FFFFFF; --ink:#2E3D50; --ink2:#5B6B80; --ink3:#8A99AC;
+  --line:#E6DFD3; --accent:#4B7BA8; --accent-soft:#E8F0F7;
+  --ok:#5B9E7E; --ok-soft:#E6F2EC; --hint:#C98A3C; --hint-soft:#FBF0DF;
+  --warn:#CE5540; --warn-soft:#FBEBE8; --yel:#E4B84D; --yel-soft:#FBF3DC;
+  --pink:#E39AA6; --pink-soft:#FBEDEF; --plum:#8E7CC3; --plum-soft:#EFEBF8;
+  --radius:18px; --shadow:0 2px 10px rgba(46,61,80,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  background:var(--bg); color:var(--ink); font-size:19px; line-height:1.6; letter-spacing:.2px;
+  -webkit-font-smoothing:antialiased; padding:16px; -webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none; user-select:none;
+}
+.wrap{width:100%; max-width:1000px; margin:0 auto}
+button{font-family:inherit; font-size:inherit; cursor:pointer; border:none; background:none; color:inherit; touch-action:manipulation}
+button:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
+button:disabled{cursor:default}
+.hide{display:none !important}
+svg{display:block}
+
+/* ── Thanh trên cùng ── */
+.topbar{display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap}
+.topbar h1{font-size:20px; font-weight:800; flex:1; min-width:180px}
+.iconbtn{display:flex; align-items:center; gap:8px; background:var(--card); border:2px solid var(--line);
+  border-radius:999px; padding:8px 16px; font-size:15px; font-weight:700; color:var(--ink2); box-shadow:var(--shadow);
+  position:relative; overflow:hidden}
+.iconbtn:hover{border-color:var(--accent); color:var(--accent)}
+.iconbtn span{position:relative; z-index:1}
+.iconbtn .fill{position:absolute; left:0; top:0; bottom:0; width:0; background:var(--accent-soft); z-index:0}
+.card{background:var(--card); border:2px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow)}
+
+/* ── Trang chủ ── */
+.hero{display:flex; gap:18px; align-items:center; padding:20px 24px}
+.hero .owlbig{flex:0 0 116px; width:116px}
+.hero h2{font-size:28px; font-weight:800; line-height:1.3}
+.hero p{color:var(--ink2); font-weight:600; margin-top:4px}
+.pill{display:inline-block; margin-top:8px; border-radius:999px; padding:4px 14px; font-weight:800; font-size:16px}
+.pill.ok{background:var(--ok-soft); color:var(--ok)}
+.sched{margin-top:14px; padding:14px 18px}
+.sched h3, .sect{font-size:16px; color:var(--ink2); font-weight:800; margin-bottom:10px; letter-spacing:.3px}
+.sect{margin:20px 4px 10px}
+.schedrow{display:flex; gap:8px; align-items:stretch; flex-wrap:wrap}
+.sstep{flex:1; min-width:170px; display:flex; align-items:center; gap:10px; background:#FDFBF7; border:2px solid var(--line);
+  border-radius:14px; padding:8px 12px; font-weight:800; font-size:17px; text-align:left; line-height:1.3}
+.sstep .num{flex:0 0 32px; height:32px; border-radius:50%; background:var(--accent-soft); color:var(--accent);
+  display:flex; align-items:center; justify-content:center; font-size:16px}
+.sstep .si{flex:0 0 46px; width:46px}
+.sstep.done{background:var(--ok-soft); border-color:#BFDCCB}
+.sstep.done .num{background:var(--ok); color:#fff}
+.sstep.next{border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft)}
+.sarrow{align-self:center; color:var(--ink3); font-weight:800}
+.ggrid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+.gcard{display:flex; flex-direction:column; align-items:center; text-align:center; padding:14px 10px 12px; gap:4px;
+  background:var(--card); border:2px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);
+  transition:border-color .15s, transform .15s}
+.gcard:hover{border-color:var(--accent); transform:translateY(-2px)}
+.gcard .gi{width:82px; height:82px}
+.gcard .gi svg{width:100%; height:100%}
+.gcard .gn{font-size:19px; font-weight:800; line-height:1.3}
+.gcard .gt{font-size:12.5px; font-weight:800; border-radius:999px; padding:2px 10px; letter-spacing:.3px}
+.gcard .gs{font-size:14px; color:var(--ink3); font-weight:700; min-height:22px}
+.tip{margin-top:18px; background:var(--accent-soft); color:var(--accent); border-radius:14px; padding:12px 18px;
+  font-size:15.5px; font-weight:600; line-height:1.6}
+
+/* ── Màn chơi ── */
+.ghead{display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap}
+.donebtn{background:var(--card); border:2px solid var(--line); border-radius:999px; padding:8px 18px;
+  font-weight:800; font-size:17px; color:var(--ink2); box-shadow:var(--shadow)}
+.donebtn:hover{border-color:var(--hint); color:var(--hint)}
+.gtitle{flex:1; font-size:21px; font-weight:800; min-width:150px}
+.dots{display:flex; gap:7px; flex-wrap:wrap}
+.dot{width:24px; height:24px; border-radius:50%; background:var(--line); display:flex; align-items:center;
+  justify-content:center; font-size:13px; transition:background .3s}
+.dot.now{background:var(--accent-soft); box-shadow:0 0 0 3px var(--accent)}
+.dot.star{background:var(--yel-soft)}
+.dot.star::after{content:'⭐'}
+.dot.went{background:#D9E4EE}
+.owlrow{display:flex; align-items:center; gap:12px; margin-bottom:12px}
+.owlmini{flex:0 0 84px; width:84px}
+.owlmini.talking svg{animation:bob .45s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translateY(-4px)}}
+.bubble{flex:1; position:relative; background:var(--card); border:2px solid var(--line); border-radius:18px;
+  padding:12px 58px 12px 18px; font-size:22px; font-weight:800; line-height:1.45; min-height:66px;
+  box-shadow:var(--shadow); display:flex; align-items:center}
+.bubble::before{content:''; position:absolute; left:-11px; top:22px; border:10px solid transparent; border-right-color:var(--line); border-left:0}
+.bubble::after{content:''; position:absolute; left:-7px; top:24px; border:8px solid transparent; border-right-color:#fff; border-left:0}
+.replay{position:absolute; right:10px; top:50%; transform:translateY(-50%); width:42px; height:42px; border-radius:50%;
+  background:var(--accent-soft); font-size:18px}
+.listen{position:absolute; right:60px; bottom:-14px; display:flex; align-items:center; gap:8px; background:var(--ok-soft);
+  color:var(--ok); border:2px solid #BFDCCB; border-radius:999px; padding:2px 12px; font-weight:800; font-size:14px}
+.listen .lv{width:80px; height:10px; background:#fff; border-radius:999px; overflow:hidden}
+.listen .lv span{display:block; height:100%; width:0; background:var(--ok); border-radius:999px; transition:width .08s}
+.stage{padding:18px; min-height:400px; position:relative; overflow:hidden}
+.parentok{position:fixed; right:16px; bottom:16px; z-index:50; background:var(--card); border:2px solid var(--ok); color:var(--ok);
+  border-radius:999px; padding:10px 18px; font-size:16px; font-weight:800; box-shadow:0 4px 14px rgba(46,61,80,.18)}
+.toast{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:var(--ink); color:#fff; border-radius:14px;
+  padding:10px 18px; font-size:15px; font-weight:700; z-index:60; max-width:90vw; text-align:center}
+
+/* chuyển động — luôn chậm, mềm, không nhấp nháy */
+.glow{animation:glow 1.8s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(75,123,168,0)}50%{box-shadow:0 0 0 12px rgba(75,123,168,.28)}}
+.wiggle{animation:wig .5s}
+@keyframes wig{25%{transform:rotate(-5deg)}75%{transform:rotate(5deg)}}
+.popin{animation:popin .4s ease-out}
+@keyframes popin{from{transform:scale(.6); opacity:0}to{transform:scale(1); opacity:1}}
+.dance{animation:dance .9s ease-in-out 2}
+@keyframes dance{25%{transform:translateY(-12px) rotate(-4deg)}75%{transform:translateY(-12px) rotate(4deg)}}
+.jump{animation:jump .7s ease-out}
+@keyframes jump{40%{transform:translateY(-22px) scale(1.08)}}
+body.calm *{animation:none !important; transition:none !important}
+
+/* thẻ hình (kiểu PECS) */
+.pcards{display:flex; gap:14px; justify-content:center; flex-wrap:wrap}
+.pcard{width:150px; background:#FDFBF7; border:3px solid var(--line); border-radius:18px; padding:10px 8px 8px;
+  display:flex; flex-direction:column; align-items:center; gap:2px; font-size:19px; font-weight:800; line-height:1.3;
+  transition:border-color .15s, background .15s}
+.pcard:hover:not(:disabled){border-color:var(--accent)}
+.pcard svg{width:92px; height:92px}
+.pcard .em{font-size:54px; line-height:1.15}
+.pcard.sel{border-color:var(--ok); background:var(--ok-soft)}
+.pcard.dim{opacity:.35}
+.pcard.small{width:118px; font-size:17px}
+.pcard.small svg{width:70px; height:70px}
+.pcard.small .em{font-size:42px}
+.tcards{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+.tcard{background:var(--card); border:3px solid var(--line); border-radius:16px; padding:12px 18px; font-size:20px; font-weight:800;
+  display:flex; align-items:center; gap:8px}
+.tcard:hover{border-color:var(--accent)}
+.tcard .em{font-size:28px}
+
+/* 1. bóng bay */
+.bongwrap{position:relative; height:400px; background:linear-gradient(#EEF4FA, #FBF6EE)}
+.balloon{position:absolute; left:50%; bottom:118px; width:150px; margin-left:-75px; transform-origin:50% 100%;
+  transform:translateY(var(--y,0px)) scale(var(--s,.35)); transition:transform .25s ease-out; cursor:pointer}
+.balloon.fly{--y:-460px; transition:transform 1.4s ease-in}
+.giftbox{position:absolute; left:50%; bottom:8px; width:120px; margin-left:-60px}
+.cloud{position:absolute; width:110px; opacity:.9}
+
+/* 2–3. con vật, vẹt */
+.anistage{display:flex; flex-direction:column; align-items:center; gap:4px; min-height:360px; justify-content:center}
+.ani{width:220px; cursor:pointer}
+.snd{font-size:44px; font-weight:800; color:var(--accent); letter-spacing:3px; min-height:62px}
+.vetrow{display:flex; gap:20px; align-items:center; justify-content:center; flex-wrap:wrap}
+.vet{width:200px}
+.bigword{font-size:54px; font-weight:800; color:var(--accent); text-align:center; min-height:70px}
+
+/* 4. con muốn gì */
+.shelf{display:flex; gap:14px; justify-content:center; flex-wrap:wrap; min-height:170px; padding:8px; background:#F6EFE3; border-radius:18px}
+.strip{display:flex; gap:8px; align-items:stretch; justify-content:center; margin-top:16px; background:var(--accent-soft);
+  border-radius:18px; padding:10px; flex-wrap:wrap}
+.sw{background:#fff; border:2px solid var(--line); border-radius:14px; padding:6px 14px; font-size:21px; font-weight:800;
+  display:flex; align-items:center; gap:6px; min-width:100px; justify-content:center; transition:transform .2s, border-color .2s, background .2s}
+.sw svg{width:50px; height:50px}
+.sw.slot{border-style:dashed; min-width:130px}
+.sw.hl{border-color:var(--accent); background:#FFF8E6; transform:scale(1.07)}
+.basket{display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-top:14px; min-height:54px; align-items:center}
+.basket .bi{width:48px; height:48px}
+.basket .lbl{font-size:15px; color:var(--ink3); font-weight:800; margin-right:6px}
+
+/* 5. đến lượt ai */
+.turnwrap{display:grid; grid-template-columns:1fr 150px 1fr; gap:12px; align-items:end; min-height:380px}
+.pl{display:flex; flex-direction:column; align-items:center; gap:8px; padding:12px 8px; border-radius:18px; border:3px solid transparent;
+  opacity:.45; transition:opacity .3s, border-color .3s, background .3s; position:relative}
+.pl.active{opacity:1; border-color:var(--accent); background:var(--accent-soft)}
+.pl .av{width:104px}
+.pl .pname{font-size:21px; font-weight:800}
+.place{background:var(--accent); color:#fff; font-size:20px; font-weight:800; padding:14px 22px; border-radius:999px; box-shadow:0 4px 0 #3B6389}
+.place.b{background:var(--pink); box-shadow:0 4px 0 #C27884}
+.place:active{transform:translateY(2px)}
+.handover{background:var(--ok); color:#fff; font-size:19px; font-weight:800; padding:12px 18px; border-radius:999px; box-shadow:0 4px 0 #478065}
+.waitsign{font-size:17px; font-weight:800; color:var(--hint); background:var(--hint-soft); border-radius:999px; padding:4px 14px}
+.tower{display:flex; flex-direction:column-reverse; align-items:center; height:360px; border-bottom:8px solid #DCD2C0; position:relative}
+.blk{width:112px; height:26px; border-radius:7px; margin-top:2px; animation:drop .35s ease-out; flex:0 0 auto}
+@keyframes drop{from{transform:translateY(-70px); opacity:0}}
+.towerstar{font-size:40px; animation:popin .5s}
+
+/* 6. cú đang nhìn gì */
+.jawrap{position:relative; height:430px}
+.jaowl{position:absolute; left:50%; top:50%; width:190px; transform:translate(-50%,-50%) rotate(var(--r,0deg)); transition:transform .6s}
+.jaslot{position:absolute; width:132px; height:132px; border-radius:24px; background:#FDFBF7; border:3px solid var(--line);
+  display:flex; align-items:center; justify-content:center; transition:opacity .3s}
+.jaslot svg{width:100px; height:100px}
+.p0{left:3%; top:3%} .p1{right:3%; top:3%} .p2{left:3%; bottom:3%} .p3{right:3%; bottom:3%}
+
+/* 7–8. cảm xúc */
+.sitcard{display:flex; gap:16px; align-items:center; background:var(--hint-soft); border-radius:16px; padding:12px 18px;
+  margin:0 auto 16px; max-width:640px; font-size:22px; font-weight:800; color:#6E4D18; line-height:1.4}
+.sitcard .si{flex:0 0 84px; width:84px}
+.facelbl{min-height:26px}
+.breath{display:flex; flex-direction:column; align-items:center; gap:10px; min-height:360px; justify-content:center}
+.breath .bo{width:200px; transition:transform 3.6s ease-in-out}
+.breath .bt{font-size:34px; font-weight:800; color:var(--accent)}
+.forparent{max-width:560px; margin:14px auto 0; text-align:center; background:var(--pink-soft); border:3px solid var(--pink);
+  border-radius:18px; padding:16px; font-size:24px; font-weight:800}
+
+/* 9. điện thoại */
+.phonewrap{display:grid; grid-template-columns:290px 1fr; gap:18px; align-items:start}
+.phone{background:#2E3D50; border-radius:34px; padding:16px 12px 10px; transform-origin:50% 80%}
+.phone.ringing{animation:ring .9s ease-in-out infinite}
+@keyframes ring{25%{transform:rotate(-2.5deg)}75%{transform:rotate(2.5deg)}}
+.screen{background:var(--bg); border-radius:22px; height:340px; display:flex; flex-direction:column; overflow:hidden}
+.phead{display:flex; align-items:center; gap:8px; padding:8px 12px; background:#fff; border-bottom:2px solid var(--line); font-weight:800; font-size:16px}
+.phead .pav{width:38px}
+.chat{flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px}
+.msg{max-width:88%; padding:7px 12px; border-radius:14px; font-size:16px; font-weight:700; line-height:1.4}
+.msg.o{background:#fff; border:2px solid var(--line); align-self:flex-start}
+.msg.c{background:var(--accent); color:#fff; align-self:flex-end}
+.callbtns{display:flex; justify-content:space-around; padding:12px 0 4px}
+.cbtn{width:68px; height:68px; border-radius:50%; font-size:28px; color:#fff}
+.cbtn.g{background:var(--ok)} .cbtn.r{background:var(--warn)}
+.cbtn:disabled{opacity:.3}
+.answers{display:flex; flex-direction:column; gap:10px}
+
+/* ── Kết thúc ── */
+.end{text-align:center; padding:34px 24px}
+.end h2{font-size:32px; font-weight:800; margin:10px 0 6px}
+.endpic{max-width:170px; margin:0 auto}
+.stars{font-size:38px; letter-spacing:4px; margin:6px 0}
+.endtext{color:var(--ink2); max-width:560px; margin:8px auto 0; font-weight:600}
+.endrow{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:24px}
+.bigbtn{background:var(--accent); color:#fff; font-size:21px; font-weight:800; padding:16px 34px; border-radius:999px; box-shadow:0 4px 0 #3B6389}
+.bigbtn:active{transform:translateY(2px); box-shadow:0 2px 0 #3B6389}
+.bigbtn.alt{background:var(--ok); box-shadow:0 4px 0 #478065}
+.bigbtn.ghost{background:var(--card); color:var(--ink2); border:2px solid var(--line); box-shadow:0 4px 0 #DDD4C6}
+
+/* ── Khu bố mẹ ── */
+.ptabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px}
+.ptab{background:var(--card); border:2px solid var(--line); border-radius:999px; padding:7px 16px; font-size:15px; font-weight:800; color:var(--ink2)}
+.ptab.on{background:var(--accent); border-color:var(--accent); color:#fff}
+.ppanel{padding:20px 22px; font-size:16px; -webkit-user-select:text; user-select:text}
+.ppanel h3{font-size:19px; font-weight:800; margin:4px 0 10px}
+.ppanel h4{font-size:16px; font-weight:800; margin:18px 0 8px; color:var(--ink2)}
+.ppanel p.note{color:var(--ink2); font-size:14.5px; line-height:1.6}
+.kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
+.kpi{background:var(--accent-soft); border-radius:14px; padding:10px; text-align:center; color:var(--accent); font-size:13.5px; font-weight:700; line-height:1.35}
+.kpi b{display:block; font-size:28px; line-height:1.2}
+.kpi.g{background:var(--ok-soft); color:var(--ok)} .kpi.h{background:var(--hint-soft); color:var(--hint)} .kpi.p{background:var(--plum-soft); color:var(--plum)}
+.chartbox svg{width:100%; height:auto}
+.legend{display:flex; gap:16px; font-size:13.5px; font-weight:700; color:var(--ink2); flex-wrap:wrap}
+.legend i{display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px}
+table.pt{width:100%; border-collapse:collapse; font-size:14.5px}
+.pt th{text-align:left; color:var(--ink2); font-weight:800; border-bottom:2px solid var(--line); padding:7px 6px}
+.pt td{border-bottom:1px solid var(--line); padding:7px 6px; vertical-align:top}
+.tblwrap{overflow-x:auto}
+.ms{display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px dashed var(--line)}
+.ms .mi{font-size:22px}
+.ms.no{opacity:.45}
+.feelrow{display:flex; gap:8px; flex-wrap:wrap}
+.feel{width:92px; text-align:center; font-size:12.5px; font-weight:700; color:var(--ink2); background:#FDFBF7; border:2px solid var(--line); border-radius:12px; padding:6px 4px}
+.feel svg{width:50px; height:50px; margin:0 auto}
+.rec{display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--line)}
+.rec .rl{flex:1}
+.smallbtn{background:var(--accent-soft); color:var(--accent); border-radius:999px; padding:6px 14px; font-size:14px; font-weight:800}
+.smallbtn.red{background:var(--warn-soft); color:var(--warn)}
+.frow{display:flex; gap:12px; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); flex-wrap:wrap}
+.frow label{flex:1; min-width:200px; font-weight:700}
+.frow small{display:block; color:var(--ink3); font-weight:600; font-size:13px}
+.frow input[type=text], .frow select, textarea{font:inherit; font-size:16px; padding:7px 10px; border:2px solid var(--line); border-radius:10px; background:#fff; color:var(--ink)}
+textarea{width:100%; min-height:80px; -webkit-user-select:text; user-select:text}
+.chk{display:flex; gap:8px; flex-wrap:wrap}
+.chk label{min-width:0; flex:0 0 auto; background:#FDFBF7; border:2px solid var(--line); border-radius:10px; padding:4px 10px; font-size:14px}
+
+@media (max-width:760px){
+  body{font-size:18px; padding:12px}
+  .ggrid{grid-template-columns:1fr 1fr}
+  .hero{padding:16px} .hero .owlbig{flex-basis:84px; width:84px} .hero h2{font-size:22px}
+  .bubble{font-size:19px} .owlmini{flex-basis:64px; width:64px}
+  .turnwrap{grid-template-columns:1fr 110px 1fr} .blk{width:90px} .pl .av{width:76px} .place{font-size:17px; padding:12px 14px}
+  .phonewrap{grid-template-columns:1fr}
+  .pcard{width:128px} .pcard svg{width:76px; height:76px}
+  .jaslot{width:104px; height:104px} .jaslot svg{width:80px; height:80px} .jaowl{width:150px}
+  .kpis{grid-template-columns:1fr 1fr}
+}
+@media (max-width:520px){
+  .topbar{margin-bottom:10px} .topbar h1{font-size:16px; min-width:0} .iconbtn{padding:7px 12px} .iconbtn .lbl{display:none}
+  .ghead{margin-bottom:8px; gap:8px} .gtitle{font-size:18px} .donebtn{font-size:15px; padding:6px 12px} .dot{width:18px; height:18px; font-size:10px}
+  .bubble{font-size:18px; padding:10px 52px 10px 14px; min-height:56px} .owlmini{flex-basis:52px; width:52px} .owlrow{gap:8px; margin-bottom:8px}
+  .stage{padding:10px; min-height:0}
+  .turnwrap{min-height:300px; grid-template-columns:1fr 84px 1fr; gap:6px} .tower{height:270px} .blk{width:74px; height:20px}
+  .pl{padding:8px 4px} .pl .av{width:60px} .pl .pname{font-size:17px} .place,.handover{font-size:15px; padding:10px 12px}
+  .jawrap{height:360px} .bongwrap{height:340px} .ani{width:170px} .snd{font-size:34px}
+  .pcard{width:44%; max-width:150px} .sw{font-size:17px; min-width:80px} .sw svg{width:38px; height:38px}
+  .hero h2{font-size:20px} .ggrid{gap:10px} .gcard .gi{width:64px; height:64px} .gcard .gn{font-size:16px}
+  .sitcard{font-size:18px} .sitcard .si{flex-basis:60px; width:60px} .bigword{font-size:40px} .vet{width:140px}
+  .screen{height:300px}
+}
+@media (prefers-reduced-motion:reduce){ *{animation:none !important; transition:none !important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <h1>💬 Cùng nói chuyện với Cú</h1>
+    <button class="iconbtn" onclick="toggleMusic()" aria-label="Bật hoặc tắt nhạc nền"><span id="musicIcon">🎵</span><span class="lbl" id="musicText">Nhạc: Bật</span></button>
+    <button class="iconbtn" onclick="toggleSound()" aria-label="Bật hoặc tắt tiếng và giọng đọc"><span id="soundIcon">🔔</span><span class="lbl" id="soundText">Âm thanh: Bật</span></button>
+    <button class="iconbtn" id="parentBtn" aria-label="Khu bố mẹ — giữ 2 giây"><div class="fill" id="parentFill"></div><span>👪</span><span class="lbl" id="parentTxt">Bố mẹ</span></button>
+  </div>
+
+  <!-- ══ TRANG CHỦ ══ -->
+  <div id="screenHome">
+    <div class="card hero">
+      <div class="owlbig" id="homeOwl"></div>
+      <div>
+        <h2 id="homeHello"></h2>
+        <p>Hôm nay mình chơi gì nào?</p>
+        <span class="pill ok" id="homeStars"></span>
+      </div>
+    </div>
+    <div class="card sched">
+      <h3>📅 LỊCH HÔM NAY</h3>
+      <div class="schedrow" id="schedRow"></div>
+    </div>
+    <div class="sect">TẤT CẢ TRÒ CHƠI</div>
+    <div class="ggrid" id="gameGrid"></div>
+    <div class="tip">👪 <b>Mẹo cho bố mẹ:</b> ngồi cạnh con, nói chậm, chờ con. Mỗi buổi chỉ 1–3 trò (5–10 phút).
+      Khi micro không nghe được mà con đã cố nói, hãy bấm nút <b>“👪 Con đã nói”</b> ở góc dưới.
+      Muốn xem nhật ký: <b>giữ nút 👪 Bố mẹ 2 giây</b>.</div>
+  </div>
+
+  <!-- ══ MÀN CHƠI ══ -->
+  <div id="screenGame" class="hide">
+    <div class="ghead">
+      <button class="donebtn" id="doneBtn">✋ Xong rồi</button>
+      <div class="gtitle" id="gTitle"></div>
+      <div class="dots" id="gDots"></div>
+    </div>
+    <div class="owlrow">
+      <div class="owlmini" id="owlMini"></div>
+      <div class="bubble" role="status" aria-live="polite">
+        <span id="bubbleText"></span>
+        <button class="replay" id="replayBtn" aria-label="Nghe lại">🔊</button>
+        <div class="listen hide" id="listenPill">👂 Cú đang nghe <div class="lv"><span id="lvBar"></span></div></div>
+      </div>
+    </div>
+    <div class="card stage" id="stage"></div>
+  </div>
+
+  <!-- ══ KẾT THÚC ══ -->
+  <div id="screenEnd" class="card end hide">
+    <div class="endpic" id="endOwl"></div>
+    <h2 id="endTitle"></h2>
+    <div class="stars" id="endStars"></div>
+    <p class="endtext" id="endText"></p>
+    <div class="endrow" id="endBtns"></div>
+  </div>
+
+  <!-- ══ KHU BỐ MẸ ══ -->
+  <div id="screenParent" class="hide">
+    <div class="ptabs" id="pTabs"></div>
+    <div class="card ppanel" id="pPanel"></div>
+  </div>
+
+</div>
+<button class="parentok hide" id="parentOK">👪 Con đã nói</button>
+<div class="toast hide" id="toast"></div>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   0. TIỆN ÍCH + CÀI ĐẶT
+   ═══════════════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+function shuffle(a){ const r = a.slice(); for(let i = r.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [r[i], r[j]] = [r[j], r[i]]; } return r; }
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function el(tag, cls, html, on){ const e = document.createElement(tag); if(cls) e.className = cls; if(html != null) e.innerHTML = html; if(on) e.onclick = on; return e; }
+function dkey(ts){ const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function hhmm(ts){ const d = new Date(ts); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
+function ddmm(k){ const p = k.split('-'); return p[2] + '/' + p[1]; }
+function toast(t, ms){ const x = $('toast'); x.textContent = t; x.classList.remove('hide'); clearTimeout(toast._t); toast._t = setTimeout(() => x.classList.add('hide'), ms || 3200); }
+
+/* ⚙ Các núm chỉnh — bố mẹ đổi được trong Khu bố mẹ › Cài đặt */
+const DEF = {
+  name:'Khôi',            // tên con — Cú gọi con bằng tên này
+  partner:'Mẹ',           // người chơi cùng (Mẹ / Bố / Cô…)
+  micMode:'auto',         // 'auto' = micro + nút bố mẹ · 'parent' = chỉ nút bố mẹ
+  sens:'vua',             // độ nhạy micro: 'thap' | 'vua' | 'cao'
+  waitSec:5,              // chờ bao nhiêu giây rồi mới gợi ý (3–12)
+  trials:6,               // số lượt mỗi trò (4–8)
+  muonLv:1,               // "Con muốn gì?": 1 chạm thẻ · 2 nói 1 từ · 3 nói cả câu
+  nhinLv:0,               // "Cú nhìn gì?": 0 tự động · 1 · 2 · 3
+  calm:false,             // tắt mọi chuyển động
+  schedule:['bong','muon','luot'],
+};
+let S = Object.assign({}, DEF);
+try{ Object.assign(S, JSON.parse(localStorage.getItem('k4_settings') || '{}')); }catch(e){}
+function saveS(){ try{ localStorage.setItem('k4_settings', JSON.stringify(S)); }catch(e){} document.body.classList.toggle('calm', !!S.calm); }
+function T(s){ return String(s).replace(/\{ten\}/g, S.name).replace(/\{ban\}/g, S.partner); }
+let FAST = false; // chỉ dùng khi kiểm thử tự động
+
+/* ═══════════════════════════════════════════════════════════════════════
+   1. HÌNH VẼ — SVG trong file. Bạn Cú giữ NGUYÊN hình như Game 01–03.
+   ═══════════════════════════════════════════════════════════════════════ */
+const C = { ink:'#2E3D50', line:'#DCD2C0', accent:'#4B7BA8', ok:'#5B9E7E', yel:'#E4B84D', red:'#CE5540', pink:'#E39AA6',
+  brown:'#A9743F', brownD:'#8B5D31', cream:'#F4EFE6', sky:'#E6F0F7', purple:'#8E7CC3', skin:'#F6D7B0', hair:'#5A4636', green:'#7DB26A' };
+const icon = inner => '<svg viewBox="0 0 100 100" aria-hidden="true">' + inner + '</svg>';
+
+/* owl(mood, {dx,dy,point}) — dx/dy: hướng mắt (-1..1) · point: 'L'|'R' giơ cánh chỉ */
+function owl(mood, o){
+  o = o || {};
+  const happy = mood === 'happy', soft = mood === 'soft';
+  const dx = (o.dx || 0) * 5, dy = (o.dy || 0) * 4;
+  let s = '<svg viewBox="-18 -4 136 114" aria-hidden="true">';
+  s += '<ellipse cx="50" cy="62" rx="34" ry="38" fill="' + C.brown + '"/>';
+  s += '<ellipse cx="50" cy="70" rx="23" ry="27" fill="' + C.cream + '"/>';
+  const up = (o.dy || 0) < 0;
+  if(o.point === 'L') s += '<ellipse cx="2" cy="' + (up ? 40 : 70) + '" rx="22" ry="7.5" fill="' + C.brownD + '" transform="rotate(' + (up ? 32 : -28) + ' 2 ' + (up ? 40 : 70) + ')"/>';
+  else s += '<path d="M16 52 q-10 22 6 38 q6 -20 4 -34 Z" fill="' + C.brownD + '"/>';
+  if(o.point === 'R') s += '<ellipse cx="98" cy="' + (up ? 40 : 70) + '" rx="22" ry="7.5" fill="' + C.brownD + '" transform="rotate(' + (up ? -32 : 28) + ' 98 ' + (up ? 40 : 70) + ')"/>';
+  else s += '<path d="M84 52 q10 22 -6 38 q-6 -20 -4 -34 Z" fill="' + C.brownD + '"/>';
+  s += '<path d="M22 28 q6 -14 16 -4 Z" fill="' + C.brownD + '"/><path d="M78 28 q-6 -14 -16 -4 Z" fill="' + C.brownD + '"/>';
+  s += '<circle cx="37" cy="44" r="14" fill="#fff"/><circle cx="63" cy="44" r="14" fill="#fff"/>';
+  const ey = (happy ? 41 : 44) + dy;
+  s += '<circle cx="' + (37+dx) + '" cy="' + ey + '" r="6" fill="' + C.ink + '"/><circle cx="' + (63+dx) + '" cy="' + ey + '" r="6" fill="' + C.ink + '"/>';
+  s += '<circle cx="' + (39+dx) + '" cy="' + (ey-2) + '" r="2" fill="#fff"/><circle cx="' + (65+dx) + '" cy="' + (ey-2) + '" r="2" fill="#fff"/>';
+  if(happy) s += '<path d="M28 36 q9 -6 18 -1 M54 35 q9 -5 18 1" stroke="' + C.brownD + '" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+  if(soft)  s += '<path d="M28 34 q9 3 18 1 M54 35 q9 -2 18 -1" stroke="' + C.brownD + '" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+  s += '<path d="M50 52 l-7 8 h14 Z" fill="' + C.yel + '"/>';
+  s += '<path d="M40 98 h8 M52 98 h8" stroke="' + C.yel + '" stroke-width="5" stroke-linecap="round"/>';
+  if(happy) s += '<g stroke="' + C.yel + '" stroke-width="2.6" stroke-linecap="round"><line x1="10" y1="24" x2="3" y2="20"/><line x1="8" y1="36" x2="0" y2="36"/><line x1="90" y1="24" x2="97" y2="20"/><line x1="92" y1="36" x2="100" y2="36"/></g>';
+  return s + '</svg>';
+}
+
+/* Đồ vật — n: từ ngắn để con nói · f: tên đầy đủ */
+const IT = {
+  bong:{n:'bóng', f:'quả bóng', s:icon('<circle cx="50" cy="52" r="32" fill="#CE5540"/><path d="M22 44 q28 14 56 0 M32 78 q18 -28 36 0" stroke="#fff" stroke-width="5" fill="none" opacity=".85"/><circle cx="38" cy="36" r="6" fill="#fff" opacity=".5"/>')},
+  xe:{n:'ô tô', f:'chiếc ô tô', s:icon('<path d="M12 64 v-12 q0 -6 6 -6 h10 l10 -15 h26 l12 15 h6 q6 0 6 6 v12 Z" fill="#4B7BA8"/><path d="M41 35 h21 l9 11 h-37 Z" fill="#E6F0F7"/><circle cx="31" cy="66" r="10" fill="#2E3D50"/><circle cx="71" cy="66" r="10" fill="#2E3D50"/><circle cx="31" cy="66" r="4" fill="#fff"/><circle cx="71" cy="66" r="4" fill="#fff"/>')},
+  gau:{n:'gấu', f:'gấu bông', s:icon('<circle cx="28" cy="28" r="11" fill="#A9743F"/><circle cx="72" cy="28" r="11" fill="#A9743F"/><circle cx="28" cy="28" r="5" fill="#E39AA6"/><circle cx="72" cy="28" r="5" fill="#E39AA6"/><circle cx="50" cy="52" r="30" fill="#A9743F"/><ellipse cx="50" cy="63" rx="14" ry="11" fill="#F4EFE6"/><circle cx="39" cy="47" r="4" fill="#2E3D50"/><circle cx="61" cy="47" r="4" fill="#2E3D50"/><ellipse cx="50" cy="59" rx="5" ry="3.5" fill="#2E3D50"/><path d="M45 66 q5 4 10 0" stroke="#2E3D50" stroke-width="2.5" fill="none" stroke-linecap="round"/>')},
+  banh:{n:'bánh', f:'cái bánh', s:icon('<path d="M18 50 h64 v28 q0 4 -4 4 h-56 q-4 0 -4 -4 Z" fill="#F4EFE6"/><path d="M18 64 h64" stroke="#E39AA6" stroke-width="6"/><path d="M16 52 q8 -12 17 0 q8 -12 17 0 q8 -12 17 0 q8 -12 17 0 v-6 h-68 Z" fill="#E39AA6"/><circle cx="50" cy="32" r="8" fill="#CE5540"/><path d="M50 24 q4 -8 10 -8" stroke="#5B9E7E" stroke-width="3" fill="none"/>')},
+  sua:{n:'sữa', f:'hộp sữa', s:icon('<path d="M32 30 l8 -12 h20 l8 12 v52 q0 4 -4 4 h-28 q-4 0 -4 -4 Z" fill="#fff" stroke="#DCD2C0" stroke-width="3"/><rect x="32" y="46" width="36" height="22" fill="#4B7BA8"/><text x="50" y="62" font-size="12" font-weight="800" text-anchor="middle" fill="#fff" font-family="Arial">SỮA</text>')},
+  keo:{n:'kẹo', f:'cái kẹo', s:icon('<path d="M30 50 l-20 -15 v30 Z M70 50 l20 -15 v30 Z" fill="#B5A7DE"/><ellipse cx="50" cy="50" rx="22" ry="16" fill="#8E7CC3"/><path d="M40 37 q9 13 0 26 M54 37 q9 13 0 26" stroke="#fff" stroke-width="3" fill="none" opacity=".6"/>')},
+  tao:{n:'táo', f:'quả táo', s:icon('<path d="M50 30 q-24 -6 -26 20 q-2 26 26 32 q28 -6 26 -32 q-2 -26 -26 -20 Z" fill="#CE5540"/><path d="M50 30 v-12" stroke="#8B5D31" stroke-width="4" stroke-linecap="round"/><path d="M50 22 q12 -10 20 -2 q-8 10 -20 2 Z" fill="#5B9E7E"/><path d="M38 46 q4 -8 10 -8" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".6"/>')},
+  chuoi:{n:'chuối', f:'quả chuối', s:icon('<path d="M24 28 q2 46 52 48 q8 0 6 -7 q-38 -6 -46 -43 q-6 -6 -12 2 Z" fill="#E4B84D"/><path d="M26 30 l-5 -8" stroke="#8B5D31" stroke-width="5" stroke-linecap="round"/>')},
+  hoa:{n:'hoa', f:'bông hoa', s:icon('<path d="M50 60 v30" stroke="#5B9E7E" stroke-width="5"/><path d="M50 78 q-14 -2 -18 -12 q12 0 18 12" fill="#5B9E7E"/><g fill="#E39AA6"><circle cx="50" cy="24" r="12"/><circle cx="68" cy="38" r="12"/><circle cx="61" cy="58" r="12"/><circle cx="39" cy="58" r="12"/><circle cx="32" cy="38" r="12"/></g><circle cx="50" cy="42" r="10" fill="#E4B84D"/>')},
+  sach:{n:'sách', f:'quyển sách', s:icon('<path d="M50 28 q-18 -10 -36 -4 v52 q18 -6 36 4 Z" fill="#4B7BA8"/><path d="M50 28 q18 -10 36 -4 v52 q-18 -6 -36 4 Z" fill="#5B9E7E"/><path d="M22 36 q12 -3 22 2 M22 46 q12 -3 22 2 M56 38 q10 -5 22 -2 M56 48 q10 -5 22 -2" stroke="#fff" stroke-width="3" fill="none" opacity=".7"/>')},
+  nuoc:{n:'nước', f:'cốc nước', s:icon('<path d="M28 22 h44 l-6 62 q0 4 -4 4 h-24 q-4 0 -4 -4 Z" fill="#fff" stroke="#DCD2C0" stroke-width="3"/><path d="M31 44 h38 l-4 40 h-30 Z" fill="#7FB3E0"/><circle cx="44" cy="56" r="3" fill="#fff" opacity=".7"/>')},
+};
+const MISC = {
+  qua:icon('<rect x="18" y="42" width="64" height="42" rx="5" fill="#E39AA6"/><rect x="14" y="32" width="72" height="14" rx="4" fill="#D47F8C"/><rect x="45" y="32" width="10" height="52" fill="#E4B84D"/><path d="M50 32 q-20 -20 -24 -6 q2 8 24 6 q20 -20 24 -6 q-2 8 -24 6" fill="#E4B84D"/>'),
+  kem:icon('<path d="M38 50 l12 40 l12 -40 Z" fill="#E4B84D"/><path d="M42 56 l16 0 M40 64 l18 0" stroke="#C98A3C" stroke-width="2"/><circle cx="50" cy="38" r="16" fill="#E39AA6"/><circle cx="74" cy="84" r="9" fill="#E39AA6" opacity=".6"/>'),
+  sam:icon('<path d="M24 54 q-12 0 -12 -12 q0 -12 14 -12 q4 -14 20 -12 q14 -14 30 0 q14 0 14 14 q0 12 -14 12 Z" fill="#8A99AC"/><path d="M52 54 l-10 16 h10 l-6 18 l18 -24 h-10 l6 -10 Z" fill="#E4B84D"/>'),
+  nga:icon('<path d="M30 20 v40 q0 14 14 14 h26" stroke="#F6D7B0" stroke-width="18" fill="none" stroke-linecap="round"/><rect x="22" y="44" width="30" height="14" rx="5" fill="#fff" stroke="#DCD2C0" stroke-width="2" transform="rotate(-12 37 51)"/><path d="M33 47 l8 6 M41 47 l-8 6" stroke="#E39AA6" stroke-width="2"/>'),
+  hand:icon('<path d="M34 86 q-14 -18 -14 -34 v-12 q0 -5 5 -5 q5 0 5 5 v12 v-28 q0 -5 5 -5 q5 0 5 5 v24 v-30 q0 -5 5 -5 q5 0 5 5 v30 v-26 q0 -5 5 -5 q5 0 5 5 v28 v-14 q0 -5 5 -5 q5 0 5 5 v22 q0 22 -14 28 Z" fill="#F6D7B0" stroke="#D9B48A" stroke-width="2"/>'),
+  more:icon('<circle cx="50" cy="50" r="36" fill="#E6F2EC"/><path d="M50 30 v40 M30 50 h40" stroke="#5B9E7E" stroke-width="10" stroke-linecap="round"/>'),
+  gift:icon('<rect x="20" y="44" width="60" height="42" rx="5" fill="#8E7CC3"/><rect x="16" y="34" width="68" height="14" rx="4" fill="#7A69AE"/><rect x="45" y="34" width="10" height="52" fill="#E4B84D"/><text x="50" y="28" font-size="22" font-weight="800" text-anchor="middle" fill="#8E7CC3" font-family="Arial">?</text>'),
+};
+function balloonSVG(col){
+  return '<svg viewBox="0 0 100 150" aria-hidden="true"><path d="M50 108 q-6 18 4 40" stroke="#8A99AC" stroke-width="2" fill="none"/>'
+    + '<ellipse cx="50" cy="56" rx="40" ry="50" fill="' + col + '"/><path d="M44 104 h12 l-6 8 Z" fill="' + col + '"/>'
+    + '<ellipse cx="34" cy="36" rx="9" ry="15" fill="#fff" opacity=".35" transform="rotate(20 34 36)"/></svg>';
+}
+const ANI = {
+  cho:icon('<ellipse cx="50" cy="56" rx="30" ry="28" fill="#D9B48A"/><ellipse cx="22" cy="50" rx="10" ry="20" fill="#8B5D31" transform="rotate(15 22 50)"/><ellipse cx="78" cy="50" rx="10" ry="20" fill="#8B5D31" transform="rotate(-15 78 50)"/><circle cx="40" cy="50" r="4.5" fill="#2E3D50"/><circle cx="60" cy="50" r="4.5" fill="#2E3D50"/><ellipse cx="50" cy="66" rx="13" ry="10" fill="#F4EFE6"/><ellipse cx="50" cy="61" rx="6" ry="4" fill="#2E3D50"/><path d="M46 72 q4 9 8 0 Z" fill="#E39AA6"/>'),
+  meo:icon('<path d="M24 36 l4 -20 l17 13 Z" fill="#E4A15C"/><path d="M76 36 l-4 -20 l-17 13 Z" fill="#E4A15C"/><ellipse cx="50" cy="56" rx="30" ry="26" fill="#E4A15C"/><path d="M40 34 v8 M50 32 v8 M60 34 v8" stroke="#C47F3C" stroke-width="3" stroke-linecap="round"/><circle cx="39" cy="52" r="4.5" fill="#2E3D50"/><circle cx="61" cy="52" r="4.5" fill="#2E3D50"/><path d="M50 62 l-5 5 h10 Z" fill="#E39AA6"/><path d="M50 67 q-6 7 -13 3 M50 67 q6 7 13 3 M28 60 h-14 M28 66 l-13 4 M72 60 h14 M72 66 l13 4" stroke="#8B5D31" stroke-width="2" fill="none" stroke-linecap="round"/>'),
+  vit:icon('<ellipse cx="54" cy="66" rx="32" ry="20" fill="#F2F2EE"/><circle cx="40" cy="38" r="17" fill="#F2F2EE"/><path d="M22 40 q-14 2 -14 6 q8 4 16 0 Z" fill="#E59A3C"/><circle cx="38" cy="34" r="3.5" fill="#2E3D50"/><path d="M60 60 q14 -6 22 6" stroke="#DCD2C0" stroke-width="3" fill="none"/><path d="M48 84 l-4 8 h10 M62 84 l-4 8 h10" stroke="#E59A3C" stroke-width="4" stroke-linecap="round" fill="none"/>'),
+  ga:icon('<circle cx="50" cy="56" r="28" fill="#F2D35C"/><path d="M44 30 q6 -10 12 0" stroke="#E4B84D" stroke-width="4" fill="none"/><circle cx="41" cy="50" r="4" fill="#2E3D50"/><circle cx="59" cy="50" r="4" fill="#2E3D50"/><path d="M44 58 l6 8 l6 -8 Z" fill="#E59A3C"/><path d="M22 60 q-8 4 -4 12 q6 -2 8 -8 M78 60 q8 4 4 12 q-6 -2 -8 -8" fill="#E4B84D"/><path d="M42 84 v8 M58 84 v8" stroke="#E59A3C" stroke-width="4" stroke-linecap="round"/>'),
+  bo:icon('<path d="M26 30 q-12 -4 -14 -14 q10 2 18 8 M74 30 q12 -4 14 -14 q-10 2 -18 8" fill="#F4EFE6" stroke="#C9BFAE" stroke-width="2"/><ellipse cx="50" cy="50" rx="28" ry="30" fill="#fff" stroke="#DCD2C0" stroke-width="2"/><path d="M28 36 q8 -4 12 6 q-6 8 -12 2 Z M66 40 q8 -6 10 4 q-6 6 -10 -4 Z" fill="#2E3D50"/><circle cx="40" cy="48" r="4" fill="#2E3D50"/><circle cx="60" cy="48" r="4" fill="#2E3D50"/><ellipse cx="50" cy="70" rx="18" ry="12" fill="#F2B8C0"/><circle cx="43" cy="70" r="3" fill="#C27884"/><circle cx="57" cy="70" r="3" fill="#C27884"/>'),
+  ech:icon('<ellipse cx="50" cy="62" rx="36" ry="24" fill="#7DB26A"/><circle cx="32" cy="38" r="13" fill="#7DB26A"/><circle cx="68" cy="38" r="13" fill="#7DB26A"/><circle cx="32" cy="38" r="8" fill="#fff"/><circle cx="68" cy="38" r="8" fill="#fff"/><circle cx="33" cy="39" r="4" fill="#2E3D50"/><circle cx="67" cy="39" r="4" fill="#2E3D50"/><path d="M28 64 q22 14 44 0" stroke="#3F6E33" stroke-width="3.5" fill="none" stroke-linecap="round"/><circle cx="26" cy="58" r="4" fill="#E39AA6" opacity=".5"/><circle cx="74" cy="58" r="4" fill="#E39AA6" opacity=".5"/>'),
+};
+function parrot(flap){
+  return '<svg viewBox="0 0 100 110" aria-hidden="true"><path d="M44 96 l-4 12 M56 96 l4 12" stroke="#8B5D31" stroke-width="4" stroke-linecap="round"/>'
+    + '<path d="M50 104 q-12 0 -10 -16" stroke="#E4B84D" stroke-width="10" fill="none"/>'
+    + '<ellipse cx="50" cy="64" rx="24" ry="32" fill="#5B9E7E"/><circle cx="50" cy="34" r="20" fill="#5B9E7E"/>'
+    + '<ellipse cx="50" cy="72" rx="14" ry="20" fill="#E4B84D"/>'
+    + (flap ? '<path d="M28 58 q-24 -18 -22 -34 q14 8 26 26 Z M72 58 q24 -18 22 -34 q-14 8 -26 26 Z" fill="#4B7BA8"/>'
+            : '<path d="M28 52 q-10 20 4 36 q4 -18 2 -32 Z M72 52 q10 20 -4 36 q-4 -18 -2 -32 Z" fill="#4B7BA8"/>')
+    + '<circle cx="42" cy="30" r="7" fill="#fff"/><circle cx="43" cy="30" r="3.5" fill="#2E3D50"/>'
+    + '<path d="M56 30 q16 2 12 16 q-8 -4 -14 -6 Z" fill="#CE5540"/><path d="M38 16 q4 -12 14 -8" stroke="#CE5540" stroke-width="5" fill="none" stroke-linecap="round"/></svg>';
+}
+function person(kind){ // 'child' | 'adult'
+  const shirt = kind === 'child' ? '#4B7BA8' : '#E39AA6';
+  const hair = kind === 'child'
+    ? '<path d="M28 34 q2 -22 22 -22 q20 0 22 22 q-10 -10 -22 -8 q-12 -2 -22 8 Z" fill="#5A4636"/>'
+    : '<path d="M24 46 q-4 -36 26 -36 q30 0 26 36 q-2 -22 -26 -24 q-24 2 -26 24 Z M24 46 q0 18 6 26 l2 -30 Z M76 46 q0 18 -6 26 l-2 -30 Z" fill="#5A4636"/>';
+  return '<svg viewBox="0 0 100 110" aria-hidden="true"><path d="M18 108 q0 -34 32 -34 q32 0 32 34 Z" fill="' + shirt + '"/>'
+    + '<circle cx="50" cy="40" r="24" fill="' + C.skin + '"/>' + hair
+    + '<circle cx="41" cy="42" r="3.2" fill="#2E3D50"/><circle cx="59" cy="42" r="3.2" fill="#2E3D50"/>'
+    + '<path d="M42 52 q8 7 16 0" stroke="#2E3D50" stroke-width="3" fill="none" stroke-linecap="round"/>'
+    + '<circle cx="35" cy="50" r="4" fill="#E39AA6" opacity=".5"/><circle cx="65" cy="50" r="4" fill="#E39AA6" opacity=".5"/></svg>';
+}
+/* Gương mặt cảm xúc */
+const EMO = { vui:'vui', buon:'buồn', gian:'giận', so:'sợ', thuong:'bình thường', met:'mệt' };
+function face(em){
+  let s = '<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="54" r="40" fill="' + C.skin + '"/>'
+    + '<path d="M12 48 q2 -38 38 -38 q36 0 38 38 q-14 -18 -38 -16 q-24 -2 -38 16 Z" fill="' + C.hair + '"/>';
+  const E = (a) => s += a;
+  const dotEyes = '<circle cx="36" cy="52" r="4.5" fill="#2E3D50"/><circle cx="64" cy="52" r="4.5" fill="#2E3D50"/>';
+  const ln = 'stroke="#2E3D50" stroke-width="4" fill="none" stroke-linecap="round"';
+  if(em === 'vui'){ E('<path d="M29 53 q7 -9 14 0 M57 53 q7 -9 14 0" ' + ln + '/><path d="M33 66 q17 20 34 0 Z" fill="#CE5540"/><circle cx="26" cy="64" r="6" fill="#E39AA6" opacity=".55"/><circle cx="74" cy="64" r="6" fill="#E39AA6" opacity=".55"/>'); }
+  if(em === 'buon'){ E(dotEyes + '<path d="M28 44 l14 -4 M58 40 l14 4" ' + ln + '/><path d="M37 78 q13 -12 26 0" ' + ln + '/><path d="M34 60 q-5 9 0 12 q5 -3 0 -12 Z" fill="#7FB3E0"/>'); }
+  if(em === 'gian'){ E(dotEyes + '<path d="M28 40 l15 6 M57 46 l15 -6" ' + ln + '/><path d="M37 76 q13 -8 26 0" ' + ln + '/><circle cx="26" cy="64" r="7" fill="#E57F6E" opacity=".55"/><circle cx="74" cy="64" r="7" fill="#E57F6E" opacity=".55"/>'); }
+  if(em === 'so'){ E('<circle cx="36" cy="52" r="8" fill="#fff" stroke="#2E3D50" stroke-width="2"/><circle cx="64" cy="52" r="8" fill="#fff" stroke="#2E3D50" stroke-width="2"/><circle cx="36" cy="52" r="3" fill="#2E3D50"/><circle cx="64" cy="52" r="3" fill="#2E3D50"/><path d="M28 38 q8 -6 16 -2 M56 36 q8 -4 16 2" ' + ln + '/><ellipse cx="50" cy="74" rx="7" ry="9" fill="#2E3D50"/>'); }
+  if(em === 'thuong'){ E(dotEyes + '<path d="M39 72 h22" ' + ln + '/>'); }
+  if(em === 'met'){ E('<path d="M29 54 h14 M57 54 h14" ' + ln + '/><path d="M40 74 q10 -4 20 0" ' + ln + '/><text x="78" y="34" font-size="16" font-weight="800" fill="#8A99AC" font-family="Arial">z z</text>'); }
+  return s + '</svg>';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   2. NHẠC + TIẾNG (engine giống Game 01–03, thêm "nín nhạc" khi Cú đang nghe)
+   ═══════════════════════════════════════════════════════════════════════ */
+const MUSIC_VOL = 0.10, BEAT = 0.30;
+let audioCtx = null, musicGain = null, sfxGain = null, sfxOn = true, musicOn = true;
+let musicPlaying = false, musicNextAt = 0, musicTimer = null, hushed = false;
+function ensureCtx(){
+  if(audioCtx) return audioCtx;
+  try{
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    musicGain = audioCtx.createGain(); musicGain.gain.value = MUSIC_VOL; musicGain.connect(audioCtx.destination);
+    sfxGain = audioCtx.createGain(); sfxGain.gain.value = 1; sfxGain.connect(audioCtx.destination);
+  }catch(e){ audioCtx = null; }
+  return audioCtx;
+}
+const N = { C3:130.81, D3:146.83, F3:174.61, G3:196.00, A3:220.00, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
+  C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00, B5:987.77, C6:1046.50, D6:1174.66, E6:1318.51 };
+function note(freq, at, dur, vol, type, dest){
+  if(!audioCtx || !freq) return;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type || 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(vol, at + 0.025); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g); g.connect(dest || sfxGain); o.start(at); o.stop(at + dur + 0.04);
+}
+// Nhạc nền: giai điệu ngũ cung chậm, nhẹ — khác Game 03 một chút cho dịu hơn
+const MELODY = [['E5',2],['G5',1],['A5',1],['G5',2],['E5',2],['D5',1],['E5',1],['G5',2],[0,2],
+  ['C5',2],['D5',1],['E5',1],['G5',2],['A5',2],['G5',1],['E5',1],['D5',2],[0,2]];
+const BASS = [['C3',4],['A3',4],['F3',4],['G3',4],['C3',4],['A3',4],['F3',4],['G3',4],['C3',4]];
+const LOOP_LEN = MELODY.reduce((s,p) => s + p[1], 0) * BEAT;
+function scheduleLoopAt(t0){
+  let t = t0; MELODY.forEach(p => { if(p[0]) note(N[p[0]], t, p[1]*BEAT*0.95, 0.45, 'triangle', musicGain); t += p[1]*BEAT; });
+  t = t0; BASS.forEach(p => { if(p[0]) note(N[p[0]], t, p[1]*BEAT*0.9, 0.35, 'sine', musicGain); t += p[1]*BEAT; });
+}
+function musicTick(){
+  if(!musicPlaying || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  while(musicNextAt < now + 1.5){ scheduleLoopAt(Math.max(musicNextAt, now + 0.05)); musicNextAt = Math.max(musicNextAt, now + 0.05) + LOOP_LEN; }
+  musicTimer = setTimeout(musicTick, 500);
+}
+function startMusic(){ if(!musicOn || musicPlaying || !ensureCtx()) return; try{ audioCtx.resume(); }catch(e){} musicPlaying = true; musicNextAt = audioCtx.currentTime + 0.1; musicTick(); }
+function stopMusic(){ musicPlaying = false; if(musicTimer){ clearTimeout(musicTimer); musicTimer = null; } if(musicGain){ const t = audioCtx.currentTime; musicGain.gain.cancelScheduledValues(t); musicGain.gain.setTargetAtTime(0, t, 0.15); setTimeout(() => { if(!musicPlaying && musicGain) musicGain.gain.value = hushed ? 0 : MUSIC_VOL; }, 900); } }
+function duck(ms){
+  if(!musicGain || !audioCtx || !musicPlaying || hushed) return;
+  const t = audioCtx.currentTime; musicGain.gain.cancelScheduledValues(t);
+  musicGain.gain.setTargetAtTime(MUSIC_VOL * 0.25, t, 0.06); musicGain.gain.setTargetAtTime(MUSIC_VOL, t + (ms || 1400)/1000, 0.3);
+}
+/* Khi Cú đang nghe con nói → nhạc tắt hẳn để micro không nghe nhầm tiếng nhạc */
+function hush(on){
+  hushed = on; if(!musicGain || !audioCtx) return;
+  const t = audioCtx.currentTime; musicGain.gain.cancelScheduledValues(t);
+  musicGain.gain.setTargetAtTime(on ? 0 : MUSIC_VOL, t, on ? 0.05 : 0.4);
+}
+function sfx(kind, i){
+  if(!sfxOn || !ensureCtx()) return;
+  const t = audioCtx.currentTime + 0.02;
+  if(kind === 'tap'){ note(N.G5, t, 0.12, 0.07, 'triangle'); }
+  if(kind === 'yay'){ [['C5',0],['E5',.09],['G5',.18],['C6',.27]].forEach(p => note(N[p[0]], t+p[1], 0.32, 0.15, 'triangle')); note(N.G5, t+.44, .45, .08, 'sine'); duck(1500); }
+  if(kind === 'soft'){ note(N.A4, t, 0.22, 0.10, 'triangle'); note(N.F4, t+0.2, 0.34, 0.09, 'triangle'); }   // "chưa đúng" — mềm, không phải còi báo lỗi
+  if(kind === 'pop'){ note(N.C6, t, 0.09, 0.12, 'sine'); note(N.G5, t+0.06, 0.18, 0.08, 'sine'); }
+  if(kind === 'ring'){ for(let k = 0; k < 2; k++){ note(N.E5, t + k*0.5, 0.18, 0.07, 'sine'); note(N.C5, t + k*0.5 + 0.2, 0.18, 0.07, 'sine'); } }
+  if(kind === 'connect'){ note(N.C5, t, 0.15, 0.08, 'sine'); note(N.G5, t+0.12, 0.25, 0.08, 'sine'); }
+  if(kind === 'block'){ const sc = ['C5','D5','E5','G5','A5','C6','D6','E6']; note(N[sc[(i||0) % sc.length]], t, 0.4, 0.13, 'triangle'); }
+  if(kind === 'whoosh'){ const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = 'sine';
+    o.frequency.setValueAtTime(300, t); o.frequency.exponentialRampToValueAtTime(900, t + 0.35);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05, t + 0.1); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    o.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + 0.45); }
+  if(kind === 'finish'){ [['C5',0],['E5',.1],['G5',.2],['C6',.3],['G5',.44],['C6',.56]].forEach(p => note(N[p[0]], t+p[1], .36, .14, 'triangle')); note(N.C6, t+.72, .9, .1, 'sine'); note(N.E5, t+.72, .9, .06, 'sine'); duck(2600); }
+  if(kind === 'breathIn'){ note(N.C5, t, 3.4, 0.05, 'sine'); note(N.E5, t + 0.2, 3.2, 0.03, 'sine'); }
+  if(kind === 'breathOut'){ note(N.G4, t, 3.4, 0.05, 'sine'); note(N.C5, t + 0.2, 3.2, 0.03, 'sine'); }
+}
+function setSoundLabel(){
+  $('soundIcon').textContent = sfxOn ? '🔔' : '🔕'; $('soundText').textContent = 'Âm thanh: ' + (sfxOn ? 'Bật' : 'Tắt');
+  $('musicIcon').textContent = musicOn ? '🎵' : '🔇'; $('musicText').textContent = 'Nhạc: ' + (musicOn ? 'Bật' : 'Tắt');
+}
+function toggleSound(){ sfxOn = !sfxOn; try{ localStorage.setItem('k4_sound', sfxOn ? '1' : '0'); }catch(e){} setSoundLabel(); if(sfxOn) sfx('tap'); else { try{ speechSynthesis.cancel(); }catch(e){} } }
+function toggleMusic(){ musicOn = !musicOn; try{ localStorage.setItem('k4_music', musicOn ? '1' : '0'); }catch(e){} setSoundLabel(); if(musicOn) startMusic(); else stopMusic(); }
+try{ if(localStorage.getItem('k4_sound') === '0') sfxOn = false; if(localStorage.getItem('k4_music') === '0') musicOn = false; }catch(e){}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   3. GIỌNG ĐỌC — chỉ dùng giọng tiếng Việt có sẵn trong máy.
+      Không có giọng Việt → chữ vẫn hiện trong bóng nói, game chờ đủ lâu để bố mẹ đọc cho con.
+   ═══════════════════════════════════════════════════════════════════════ */
+let viVoice = null, lastLine = '';
+function loadVoices(){
+  try{ const vs = speechSynthesis.getVoices() || [];
+    viVoice = vs.find(v => /^vi\b|^vi-/i.test(v.lang || '')) || vs.find(v => /vietnam/i.test((v.name || '') + (v.lang || ''))) || null;
+  }catch(e){ viVoice = null; }
+}
+if('speechSynthesis' in window){ loadVoices(); try{ speechSynthesis.onvoiceschanged = loadVoices; }catch(e){} }
+function speakP(text, o){
+  o = o || {};
+  const clean = String(text).replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '').trim();
+  return new Promise(res => {
+    if(FAST) return setTimeout(res, 20);
+    const fallback = () => setTimeout(res, Math.min(3000, 700 + clean.length * 45));
+    if(!sfxOn || !viVoice || !('speechSynthesis' in window) || !clean) return fallback();
+    let done = false; const fin = () => { if(done) return; done = true; owlTalking(false); res(); };
+    try{
+      const u = new SpeechSynthesisUtterance(clean);
+      u.voice = viVoice; u.lang = viVoice.lang || 'vi-VN'; u.rate = o.rate || 0.9; u.pitch = o.pitch || 1.1; u.volume = 1;
+      u.onend = fin; u.onerror = fin;
+      speechSynthesis.cancel();
+      owlTalking(!o.child); duck(clean.length * 95 + 700);
+      setTimeout(() => { try{ speechSynthesis.speak(u); }catch(e){ fin(); } }, 40);
+      setTimeout(fin, 2500 + clean.length * 120);
+    }catch(e){ fin(); }
+  });
+}
+function owlTalking(on){ const m = $('owlMini'); if(m) m.classList.toggle('talking', on); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   4. MICRO — chỉ đo "có tiếng nói hay không" + ghi âm để phát lại.
+      Không nhận dạng chữ (giọng trẻ em rất khó nhận, và mục tiêu là KHUYẾN KHÍCH nói).
+   ═══════════════════════════════════════════════════════════════════════ */
+const Mic = { ok:false, tried:false, stream:null, an:null, buf:null, floor:0.006, cur:null, paused:false, rec:null, chunks:[], recT0:0, mime:'' };
+async function micInit(){
+  if(Mic.ok) return true;
+  if(Mic.tried) return false;
+  Mic.tried = true;
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !ensureCtx()) return false;
+  try{
+    Mic.stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:false } });
+    const src = audioCtx.createMediaStreamSource(Mic.stream);
+    Mic.an = audioCtx.createAnalyser(); Mic.an.fftSize = 1024; Mic.buf = new Uint8Array(Mic.an.fftSize); src.connect(Mic.an);
+    if(window.MediaRecorder){ for(const m of ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/aac']){ try{ if(MediaRecorder.isTypeSupported(m)){ Mic.mime = m; break; } }catch(e){} } }
+    Mic.ok = true;
+    const arr = []; for(let i = 0; i < 12; i++){ arr.push(micLevel()); await wait(40); }
+    arr.sort((a,b) => a - b); Mic.floor = Math.max(0.003, arr[6] || 0.006);
+    return true;
+  }catch(e){ return false; }
+}
+function micLevel(){ if(!Mic.an) return 0; Mic.an.getByteTimeDomainData(Mic.buf); let s = 0; for(let i = 0; i < Mic.buf.length; i++){ const v = (Mic.buf[i] - 128) / 128; s += v*v; } return Math.sqrt(s / Mic.buf.length); }
+function micThr(){ return Math.max(0.018, Mic.floor * 3) * ({ cao:0.7, vua:1, thap:1.45 }[S.sens] || 1); }
+const VOICE_MIN = 220, VOICE_SIL = 650, VOICE_MAX = 6000;   // ms: tiếng ngắn nhất được tính · im bao lâu là nói xong · dài nhất
+function micListen(c){
+  Mic.cur = c; Mic.paused = false; hush(true); $('listenPill').classList.remove('hide');
+  if(c.o.record) recStart();
+  let st = 0, aboveSince = 0, belowSince = 0, speechStart = 0;
+  const tryEnd = now => {
+    const dur = (belowSince || now) - speechStart;
+    if(dur < VOICE_MIN){ st = 0; c.speaking = false; aboveSince = 0; return false; }
+    c.finishing = true;
+    recStop(speechStart, dur).then(rec => { c.finishing = false; answer('voice', null, { voiceMs:Math.round(dur), rec }); });
+    return true;
+  };
+  const loop = () => {
+    if(Mic.cur !== c || c.done) return;
+    const now = performance.now(), l = micLevel(), thr = micThr(), x = l / thr;
+    $('lvBar').style.width = Math.min(100, x * 50) + '%';
+    if(Mic.paused){ aboveSince = 0; if(st === 1){ st = 0; c.speaking = false; } requestAnimationFrame(loop); return; }
+    if(c.o.onLevel) c.o.onLevel(x);
+    if(st === 0){
+      if(l > thr){ if(!aboveSince) aboveSince = now; if(now - aboveSince > 90){ st = 1; c.speaking = true; speechStart = aboveSince; belowSince = 0; } }
+      else { aboveSince = 0; Mic.floor = Mic.floor * 0.97 + l * 0.03; }
+    } else {
+      if(l < thr * 0.65){ if(!belowSince) belowSince = now; if(now - belowSince > VOICE_SIL && tryEnd(now)) return; }
+      else belowSince = 0;
+      if(st === 1 && now - speechStart > VOICE_MAX && tryEnd(now)) return;
+    }
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+function micStop(){ Mic.cur = null; Mic.paused = false; recAbort(); hush(false); $('listenPill').classList.add('hide'); }
+function recStart(){
+  if(!Mic.ok || !window.MediaRecorder) return;
+  try{ Mic.chunks = []; Mic.rec = new MediaRecorder(Mic.stream, Mic.mime ? { mimeType:Mic.mime } : undefined);
+    Mic.rec.ondataavailable = e => { if(e.data && e.data.size) Mic.chunks.push(e.data); };
+    Mic.rec.start(); Mic.recT0 = performance.now(); }catch(e){ Mic.rec = null; }
+}
+function recStop(speechStart, dur){
+  return new Promise(res => {
+    const r = Mic.rec; Mic.rec = null;
+    if(!r || r.state === 'inactive') return res(null);
+    const t0 = Mic.recT0, chunks = Mic.chunks;
+    r.onstop = () => res({ blob:new Blob(chunks, { type:r.mimeType || Mic.mime || 'audio/webm' }), off:Math.max(0, (speechStart - t0)/1000 - 0.2), dur:dur/1000 + 0.45 });
+    try{ r.stop(); }catch(e){ res(null); }
+    setTimeout(() => res(null), 1800);
+  });
+}
+function recAbort(){ if(Mic.rec){ try{ Mic.rec.onstop = null; Mic.rec.stop(); }catch(e){} Mic.rec = null; } }
+async function playRec(rec, rate){
+  if(!rec || !rec.blob || !ensureCtx() || !sfxOn || FAST) return;
+  try{
+    if(!rec.buf){ const ab = await rec.blob.arrayBuffer(); rec.buf = await new Promise((ok, no) => audioCtx.decodeAudioData(ab, ok, no)); }
+    const src = audioCtx.createBufferSource(); src.buffer = rec.buf; src.playbackRate.value = rate || 1;
+    const g = audioCtx.createGain(); g.gain.value = 1.8; src.connect(g); g.connect(audioCtx.destination);
+    const off = Math.min(rec.off || 0, Math.max(0, rec.buf.duration - 0.4)), d = Math.min(rec.dur || rec.buf.duration, rec.buf.duration - off);
+    duck((d / (rate || 1)) * 1000 + 800);
+    await new Promise(ok => { src.onended = ok; src.start(0, off, d); setTimeout(ok, (d / (rate || 1)) * 1000 + 700); });
+  }catch(e){}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   5. NHẬT KÝ — localStorage (số liệu) + IndexedDB (giọng của con)
+   ═══════════════════════════════════════════════════════════════════════ */
+let LOG = { v:1, sessions:[], feel:[], notes:{} };
+try{ const x = JSON.parse(localStorage.getItem('k4_log') || 'null'); if(x && x.sessions) LOG = Object.assign(LOG, x); }catch(e){}
+function saveLog(){ try{ if(LOG.sessions.length > 600) LOG.sessions = LOG.sessions.slice(-600); if(LOG.feel.length > 400) LOG.feel = LOG.feel.slice(-400); localStorage.setItem('k4_log', JSON.stringify(LOG)); }catch(e){} }
+/* Mỗi lượt (trial):  k = kỹ năng · tgt = mục tiêu · r = cách con phản hồi ('voice' | 'parent' | 'card' | 'tap' | 'none')
+   p = mức gợi ý (0 tự làm · 1 gợi nhẹ · 2 gợi rõ · 3 làm mẫu) · ok · ms = thời gian đến lúc phản hồi · v = độ dài tiếng nói (ms) */
+const SKILL = { voc:'Phát ra tiếng', imit:'Bắt chước âm', mand:'Yêu cầu', choice:'Lựa chọn', turn:'Đưa lượt', wait:'Chờ lượt',
+  ja:'Chú ý chung', emo:'Nhận ra cảm xúc', emp:'Nói lời quan tâm', feel:'Nói cảm xúc mình', conv:'Hội thoại', ask:'Hỏi lại', brk:'Tự xin nghỉ' };
+const isAct = t => t.r && t.r !== 'none' && t.k !== 'wait';
+const isVoice = t => t.r === 'voice' || t.r === 'parent';
+
+const DB = { db:null };
+function idb(){ return new Promise(res => { if(DB.db) return res(DB.db); try{ const r = indexedDB.open('k4_audio', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('rec', { keyPath:'id' }); r.onsuccess = () => { DB.db = r.result; res(DB.db); }; r.onerror = () => res(null); }catch(e){ res(null); } }); }
+async function recSave(rec, game, label){
+  if(!rec || !rec.blob) return; const db = await idb(); if(!db) return;
+  try{ const tx = db.transaction('rec', 'readwrite'); tx.objectStore('rec').put({ id:Date.now(), game, label, blob:rec.blob, off:rec.off, dur:rec.dur }); }catch(e){}
+  const all = await recList(); if(all.length > 80) all.slice(0, all.length - 80).forEach(r => recDel(r.id));
+}
+async function recList(){ const db = await idb(); if(!db) return []; return new Promise(res => { try{ const q = db.transaction('rec').objectStore('rec').getAll(); q.onsuccess = () => res(q.result || []); q.onerror = () => res([]); }catch(e){ res([]); } }); }
+async function recDel(id){ const db = await idb(); if(!db) return; try{ db.transaction('rec', 'readwrite').objectStore('rec').delete(id); }catch(e){} }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   6. KHUNG CHƠI CHUNG — hỏi / chờ / gợi ý tăng dần / ghi nhật ký
+   ═══════════════════════════════════════════════════════════════════════ */
+let RUN = 0, CUR = null, G = null;
+const STOP = { stop:true };
+function screen(id){ ['screenHome','screenGame','screenEnd','screenParent'].forEach(s => $(s).classList.toggle('hide', s !== id)); window.scrollTo(0, 0); }
+function setBubble(text, mood){ $('bubbleText').textContent = text; lastLine = text; $('owlMini').innerHTML = owl(mood || ''); }
+async function say(text, mood){ setBubble(text, mood); await speakP(text); }
+
+/* ask(): chờ con phản hồi.
+   o.voice  — nghe micro (và hiện nút 👪 cho bố mẹ)   o.record — ghi âm
+   o.hints  — các hàm gợi ý, gọi lần lượt sau mỗi S.waitSec giây im lặng
+   Hết gợi ý mà vẫn chưa có gì → trả về {type:'none'} và game tự đi tiếp nhẹ nhàng (không bao giờ kẹt). */
+function ask(o){
+  return new Promise(res => {
+    const c = CUR = { o, res, t0:performance.now(), prompt:0, done:false, speaking:false, paused:false };
+    const useMic = o.voice && Mic.ok && S.micMode !== 'parent';
+    if(o.voice) $('parentOK').classList.remove('hide');
+    if(useMic) micListen(c);
+    (async () => {
+      const hints = o.hints || [];
+      for(let i = 0; i <= hints.length; i++){
+        let t = 0; const W = (FAST ? 0.15 : S.waitSec) * 1000 * (i === hints.length ? 1.4 : 1);
+        while(t < W){ await wait(150); if(c.done) return; if(!c.speaking && !c.finishing) t += 150; }
+        if(c.done) return;
+        if(i < hints.length){ c.prompt = i + 1; Mic.paused = true; try{ await hints[i](); }catch(e){} await wait(250); Mic.paused = false; }
+        else answer('none');
+      }
+    })();
+  });
+}
+function answer(type, value, extra){
+  const c = CUR; if(!c || c.done) return; c.done = true; CUR = null;
+  micStop(); $('parentOK').classList.add('hide');
+  c.res(Object.assign({ type, value, prompt:c.prompt, ms:Math.round(performance.now() - c.t0) }, extra || {}));
+}
+function stopAll(){ RUN++; if(CUR){ CUR.done = true; CUR = null; } micStop(); $('parentOK').classList.add('hide'); try{ speechSynthesis.cancel(); }catch(e){} owlTalking(false); }
+function setDots(n){ const d = $('gDots'); d.innerHTML = ''; for(let i = 0; i < n; i++) d.appendChild(el('div', 'dot')); G.total = n; nowDot(0); }
+function nowDot(i){ [...$('gDots').children].forEach((x, k) => x.classList.toggle('now', k === i && !x.classList.contains('star') && !x.classList.contains('went'))); }
+function markDot(i, got){ const x = $('gDots').children[i]; if(!x) return; x.classList.remove('now'); x.classList.add(got ? 'star' : 'went'); G.stars[i] = got; nowDot(i + 1); }
+
+function ctx(rid){
+  const chk = () => { if(rid !== RUN) throw STOP; };
+  return {
+    say: async (t, m) => { chk(); await say(T(t), m); chk(); },
+    wait: async ms => { chk(); await wait(FAST ? Math.min(ms, 30) : ms); chk(); },
+    ask: async o => { chk(); const r = await ask(o); chk(); return r; },
+    stage: $('stage'),
+    log: t => { G.sess.tr.push(Object.assign({ at:Date.now() }, t)); G.sess.e = Date.now(); saveLog(); },
+    star: (i, got) => markDot(i, got),
+    alive: () => rid === RUN,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   7. CHÍN TRÒ CHƠI
+   Mỗi trò: Cú nói (chữ + giọng) → chờ con → gợi ý tăng dần → khen CỤ THỂ → ghi nhật ký
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. THỔI BÓNG BAY — con phát ra BẤT KỲ tiếng nào là bóng to lên và bay ── */
+async function gBong(g){
+  const n = S.trials; setDots(n);
+  const cols = ['#E39AA6','#4B7BA8','#E4B84D','#5B9E7E','#8E7CC3','#CE5540','#C98A3C','#7FB3E0'];
+  const gifts = shuffle(Object.keys(IT));
+  g.stage.innerHTML = '<div class="bongwrap"><div class="cloud" style="left:6%;top:8%">' + cloud() + '</div><div class="cloud" style="right:8%;top:22%">' + cloud() + '</div>'
+    + '<div class="balloon" id="bal"></div><div class="giftbox" id="gift"></div></div>';
+  const bal = $('bal'), gift = $('gift');
+  for(let i = 0; i < n; i++){
+    let size = 0.35, tapOK = false;
+    bal.className = 'balloon'; bal.style.transition = 'none'; bal.style.setProperty('--s', size); bal.innerHTML = balloonSVG(cols[i % cols.length]);
+    void bal.offsetWidth; bal.style.transition = '';
+    gift.innerHTML = MISC.gift; gift.className = 'giftbox';
+    bal.onclick = () => { if(tapOK) answer('tap'); else { bal.classList.remove('wiggle'); void bal.offsetWidth; bal.classList.add('wiggle'); } };
+    await g.say(i === 0 ? 'Con nói thật to nhé: Aaaa!' : pick(['Bóng mới nè! Con nói đi.', 'Thêm một quả nữa! Con nói to lên nào.', 'Con thổi bóng bằng giọng nói nhé!']), 'happy');
+    const r = await g.ask({ voice:true,
+      onLevel: x => { if(x > 1){ size = Math.min(1, size + 0.012 * x); bal.style.setProperty('--s', size); } },
+      hints:[ () => g.say('Aaaa… Con nói “A” nhé.'),
+              () => g.say('Cú làm mẫu nè: Aaaaa! Đến lượt con.', 'happy'),
+              async () => { tapOK = true; bal.classList.add('glow'); await g.say('Con chạm vào bóng cũng được nè.'); } ] });
+    const got = r.type !== 'none';
+    bal.classList.remove('glow'); bal.style.setProperty('--s', 1); sfx('pop');
+    await g.wait(300); bal.classList.add('fly'); sfx('whoosh');
+    await g.wait(900);
+    const k = gifts[i % gifts.length]; gift.innerHTML = IT[k].s; gift.classList.add('popin'); sfx('yay');
+    g.log({ k:'voc', tgt:'tiếng nói', r:r.type, p:r.prompt, ok:got, ms:r.ms, v:r.voiceMs || 0 });
+    g.star(i, got);
+    await g.say(r.type === 'voice' || r.type === 'parent' ? pick(['Giọng của con làm bóng bay lên kìa!', 'Con nói to quá! Bóng bay cao rồi!']) : 'Bóng bay lên rồi!', 'happy');
+    await g.say('Trong hộp có ' + IT[k].f + '!');
+  }
+}
+function cloud(){ return '<svg viewBox="0 0 110 50" aria-hidden="true"><path d="M20 44 q-16 0 -16 -12 q0 -14 18 -12 q4 -16 24 -14 q12 -10 26 0 q20 -4 22 14 q14 2 12 12 q0 12 -14 12 Z" fill="#fff"/></svg>'; }
+
+/* ── 2. CON VẬT KÊU THẾ NÀO? — bắt chước âm, nghe lại giọng mình ── */
+const ANIMALS = [ {k:'cho', n:'con chó', snd:'gâu gâu'}, {k:'meo', n:'con mèo', snd:'meo meo'}, {k:'vit', n:'con vịt', snd:'cạp cạp'},
+  {k:'ga', n:'gà con', snd:'chíp chíp'}, {k:'bo', n:'con bò', snd:'ò ò'}, {k:'ech', n:'con ếch', snd:'ộp ộp'} ];
+async function gConvat(g){
+  const n = Math.min(S.trials, ANIMALS.length), list = shuffle(ANIMALS).slice(0, n); setDots(n);
+  g.stage.innerHTML = '<div class="anistage"><div class="ani" id="ani"></div><div class="snd" id="snd"></div></div>';
+  const ani = $('ani'), snd = $('snd');
+  for(let i = 0; i < n; i++){
+    const a = list[i], one = a.snd.split(' ')[0]; let tapOK = false;
+    ani.className = 'ani popin'; ani.innerHTML = ANI[a.k]; snd.textContent = '';
+    ani.onclick = () => { if(tapOK) answer('tap'); else { ani.classList.remove('jump'); void ani.offsetWidth; ani.classList.add('jump'); sfx('tap'); } };
+    await g.say('Đây là ' + a.n + '.');
+    snd.textContent = a.snd.toUpperCase() + '!'; ani.classList.add('jump');
+    await g.say(cap(a.n) + ' kêu: ' + a.snd + '!', 'happy');
+    await g.say('Đến lượt {ten}: ' + a.snd + '!');
+    const r = await g.ask({ voice:true, record:true, hints:[
+      () => g.say(cap(a.snd) + '! Con kêu giống ' + a.n + ' nhé.'),
+      () => g.say('Con nói theo Cú: ' + one + '… ' + one + '!', 'happy'),
+      async () => { tapOK = true; ani.classList.add('glow'); await g.say('Con chạm vào ' + a.n + ' cũng được.'); } ] });
+    ani.classList.remove('glow');
+    const got = r.type !== 'none';
+    if(got){ ani.classList.remove('jump'); void ani.offsetWidth; ani.classList.add('dance'); sfx('yay'); }
+    if(r.type === 'voice' && r.rec){
+      await g.say('Nghe nè, giọng của con đó!', 'happy'); await playRec(r.rec, 1); recSave(r.rec, 'convat', a.snd);
+      await g.say(pick(['Con kêu giống ' + a.n + ' quá!', cap(a.n) + ' thích giọng của con lắm!']), 'happy');
+    } else if(got){ await g.say(pick(['Hay quá! ' + cap(a.n) + ' kêu ' + a.snd + '!', 'Giỏi lắm! ' + cap(a.snd) + '!']), 'happy'); }
+    else await g.say('Lần sau mình cùng kêu nhé. ' + cap(a.n) + ' kêu ' + a.snd + '.', 'soft');
+    g.log({ k:'imit', tgt:a.snd, r:r.type, p:r.prompt, ok:got, ms:r.ms, v:r.voiceMs || 0 });
+    g.star(i, got);
+    await g.wait(500);
+  }
+}
+
+/* ── 3. CHÚ VẸT NHẠI LỜI — con CHỌN một từ, nói ra, Vẹt nhại lại bằng giọng con (cao hơn, buồn cười) ── */
+const VWORDS = [ {w:'Mẹ', s:() => person('adult')}, {w:'Bố', s:() => person('adult').replace('#E39AA6','#5B9E7E')}, {w:'Bóng', s:() => IT.bong.s},
+  {w:'Xe', s:() => IT.xe.s}, {w:'Nữa', s:() => MISC.more}, {w:'Chào', s:() => MISC.hand}, {w:'Gấu', s:() => IT.gau.s}, {w:'Hoa', s:() => IT.hoa.s} ];
+async function gVet(g){
+  const n = S.trials; setDots(n);
+  g.stage.innerHTML = '<div class="vetrow"><div class="vet" id="vet"></div><div><div class="bigword" id="vword"></div><div class="pcards" id="vcards"></div></div></div>';
+  const vet = $('vet'), vw = $('vword'), box = $('vcards');
+  for(let i = 0; i < n; i++){
+    vet.innerHTML = parrot(false); vw.textContent = ''; box.innerHTML = '';
+    const opts = shuffle(VWORDS).slice(0, 3);
+    opts.forEach(o => box.appendChild(el('button', 'pcard', o.s() + o.w, () => answer('card', o))));
+    await g.say(i === 0 ? 'Đây là bạn Vẹt. Con chọn một chữ để nói với Vẹt nhé!' : 'Con chọn chữ nào nữa?');
+    const r1 = await g.ask({ auto:() => answer('card', opts[0]), hints:[
+      () => { box.classList.add('glow'); return g.say('Con chạm vào một thẻ nhé.'); },
+      () => g.say(opts.map(o => o.w).join(', ') + '. Con thích chữ nào?') ] });
+    box.classList.remove('glow');
+    const w = (r1.value || opts[0]).w;
+    [...box.children].forEach((b, k) => { b.disabled = true; b.classList.toggle(opts[k].w === w ? 'sel' : 'dim', true); });
+    vw.textContent = w; vw.className = 'bigword popin'; sfx('tap');
+    await g.say('Con nói: ' + w + '!');
+    let flap = () => { vet.innerHTML = parrot(true); setTimeout(() => { if(g.alive()) vet.innerHTML = parrot(false); }, 600); };
+    vet.onclick = () => { flap(); };
+    const r = await g.ask({ voice:true, record:true, hints:[
+      () => g.say(w + '! Vẹt đang chờ con đó.'),
+      () => g.say('Con nói theo Cú nhé: ' + w + '.', 'happy') ] });
+    const got = r.type !== 'none';
+    if(r.type === 'voice' && r.rec){
+      await g.say('Vẹt nhại lại nè!', 'happy'); flap(); await playRec(r.rec, 1.45); flap(); recSave(r.rec, 'vet', w);
+      await g.say(pick(['Hi hi! Vẹt nói giống con quá!', 'Con nói “' + w + '” rồi! Giỏi quá!']), 'happy');
+    } else if(got){ flap(); await speakP(w + '! ' + w + '!', { pitch:1.6, rate:1.05 }); await g.say('Con nói “' + w + '” rồi! Giỏi quá!', 'happy'); }
+    else { flap(); await speakP(w + '!', { pitch:1.6 }); await g.say('Vẹt nói “' + w + '”. Lần sau con nói cùng Vẹt nhé.', 'soft'); }
+    g.log({ k:'imit', tgt:w, r:r.type, p:r.prompt, ok:got, ms:r.ms, v:r.voiceMs || 0, choice:r1.type !== 'none' });
+    g.star(i, got);
+    await g.wait(400);
+  }
+}
+
+/* ── 4. CON MUỐN GÌ? — thẻ hình kiểu PECS + câu "Con muốn ___" ──
+   Cấp 1: chạm thẻ là được · Cấp 2: chạm + nói 1 từ · Cấp 3: nói cả câu.
+   Có thẻ "Nữa" (xin thêm) — một trong những từ yêu cầu quan trọng nhất. */
+async function gMuon(g){
+  const n = S.trials, lv = S.muonLv; setDots(n);
+  const pool = ['banh','sua','bong','xe','gau','keo','tao','chuoi'];
+  g.stage.innerHTML = '<div class="shelf" id="shelf"></div>'
+    + '<div class="strip"><div class="sw" id="sw1">🙋 Con muốn</div><div class="sw slot" id="slot"></div><button class="sw" id="spk" aria-label="Đọc câu">🔊</button></div>'
+    + '<div class="basket" id="basket"><span class="lbl">Giỏ của con:</span></div>';
+  const shelf = $('shelf'), slot = $('slot'), sw1 = $('sw1'), basket = $('basket');
+  let lastK = null;
+  const readStrip = async k => { sw1.classList.add('hl'); await wait(FAST ? 10 : 350); slot.classList.add('hl'); await speakP('Con muốn ' + IT[k].n + '.'); sw1.classList.remove('hl'); slot.classList.remove('hl'); };
+  $('spk').onclick = () => { if(slot.dataset.k) readStrip(slot.dataset.k); };
+  for(let i = 0; i < n; i++){
+    const choices = shuffle(pool).slice(0, lv === 1 ? 2 : lv === 2 ? 3 : 4);
+    shelf.innerHTML = ''; slot.innerHTML = ''; slot.dataset.k = '';
+    choices.forEach(k => shelf.appendChild(el('button', 'pcard', IT[k].s + cap(IT[k].n), () => answer('card', k))));
+    if(lastK) shelf.appendChild(el('button', 'pcard', MISC.more + 'Nữa', () => answer('card', 'nua')));
+    await g.say(i === 0 ? 'Cú có nhiều đồ lắm. Con muốn gì nào?' : (lastK ? 'Con muốn gì nữa? Muốn thêm ' + IT[lastK].n + ' thì chọn “Nữa”.' : 'Con muốn gì nữa?'));
+    const r = await g.ask({ auto:() => answer('card', choices[0]), hints:[
+      () => { sw1.classList.add('hl'); setTimeout(() => sw1.classList.remove('hl'), 1500); return g.say('Con chọn một món con thích nhé.'); },
+      () => { shelf.classList.add('glow'); return g.say('Con muốn ' + IT[choices[0]].f + ' hay ' + IT[choices[1]].f + '?'); },
+      () => g.say('Con chạm vào một món là Cú đưa cho con.') ] });
+    shelf.classList.remove('glow');
+    if(r.type === 'none'){ g.log({ k:'mand', tgt:'-', r:'none', p:r.prompt, ok:false, ms:r.ms }); g.star(i, false); await g.say('Không sao. Mình chơi tiếp nhé.', 'soft'); continue; }
+    const isMore = r.value === 'nua', k = isMore ? lastK : r.value;
+    [...shelf.children].forEach(b => b.disabled = true);
+    slot.innerHTML = IT[k].s + cap(IT[k].n); slot.dataset.k = k; slot.classList.add('popin'); sfx('tap');
+    if(isMore) await g.say('Con muốn ' + IT[k].n + ' nữa!', 'happy'); else await readStrip(k);
+    let v = null;
+    if(lv >= 2){
+      const target = isMore ? 'Nữa' : (lv === 2 ? cap(IT[k].n) : 'Con muốn ' + IT[k].n);
+      await g.say('Con nói nhé: ' + target + '!');
+      v = await g.ask({ voice:true, record:lv === 3, hints:[ () => g.say(target + '!'), () => g.say('Con nói theo Cú: ' + target + '.', 'happy') ] });
+      if(v.rec) recSave(v.rec, 'muon', target);
+    }
+    basket.appendChild(el('div', 'bi popin', IT[k].s)); sfx('yay');
+    await g.say(v && v.type !== 'none' ? pick(['Con nói rồi! Đây, ' + IT[k].f + ' của con!', 'Cú nghe rồi! ' + cap(IT[k].f) + ' của con nè!'])
+                                       : pick(['Đây, ' + IT[k].f + ' của con!', 'Cú đưa con ' + IT[k].f + ' nè!']), 'happy');
+    g.log({ k:'mand', tgt:(isMore ? 'nữa' : IT[k].n), r:(v && v.type !== 'none') ? v.type : 'card', p:Math.max(r.prompt, v ? v.prompt : 0), ok:true, ms:r.ms, v:v ? (v.voiceMs || 0) : 0, lv });
+    g.star(i, true); lastK = k;
+    await g.wait(400);
+  }
+}
+
+/* ── 5. ĐẾN LƯỢT AI? — xây tháp cùng bố mẹ. Con tập CHỜ và tập ĐƯA LƯỢT ("Đến lượt Mẹ!") ── */
+async function gLuot(g){
+  const n = S.trials; setDots(n);
+  g.stage.innerHTML = '<div class="turnwrap">'
+    + '<div class="pl" id="plA"><div class="av">' + person('child') + '</div><div class="pname">' + esc(S.name) + '</div>'
+    + '<button class="place" id="btnA">Đặt khối</button><button class="handover hide" id="handA">Đến lượt ' + esc(S.partner) + ' 👉</button><div class="waitsign hide" id="waitA">✋ Chờ nhé</div></div>'
+    + '<div class="tower" id="tower"></div>'
+    + '<div class="pl" id="plB"><div class="av">' + person('adult') + '</div><div class="pname">' + esc(S.partner) + '</div>'
+    + '<button class="place b" id="btnB">Đặt khối</button><div class="waitsign hide" id="waitB">✋ Chờ nhé</div></div></div>';
+  const tower = $('tower'), blkCols = ['#4B7BA8','#E39AA6','#E4B84D','#5B9E7E','#8E7CC3','#C98A3C','#7FB3E0','#CE5540'];
+  let turn = 'A', blocks = 0, impulses = 0, partnerTap = null;
+  const add = () => { const b = el('div', 'blk'); b.style.background = blkCols[blocks % blkCols.length]; tower.appendChild(b); sfx('block', blocks); blocks++; };
+  const setTurn = w => { turn = w; $('plA').classList.toggle('active', w === 'A'); $('plB').classList.toggle('active', w === 'B'); $('waitA').classList.toggle('hide', w !== 'B'); };
+  $('btnA').onclick = () => {
+    if(turn === 'A' && CUR && !CUR.o.voice) answer('tap');
+    else if(turn === 'B'){ impulses++; $('waitA').classList.remove('wiggle'); void $('waitA').offsetWidth; $('waitA').classList.add('wiggle'); sfx('soft'); setBubble(T('Chờ một chút nhé. Đang là lượt của {ban}.'), 'soft'); }
+  };
+  $('btnB').onclick = () => { if(turn === 'B' && partnerTap) partnerTap(); };
+  $('handA').onclick = () => { if(CUR && CUR.o.voice) answer('card'); };
+  for(let i = 0; i < n; i++){
+    setTurn('A');
+    await g.say(i === 0 ? 'Mình cùng xây tháp nhé! Đến lượt {ten} trước.' : 'Đến lượt {ten}!', 'happy');
+    const r1 = await g.ask({ auto:() => answer('tap'), hints:[
+      () => { $('btnA').classList.add('glow'); return g.say('Con bấm “Đặt khối” nhé.'); }, () => g.say('Con đặt một khối lên tháp nào.') ] });
+    $('btnA').classList.remove('glow'); add();
+    $('handA').classList.remove('hide');
+    await g.say('Đẹp quá! Bây giờ con nói: Đến lượt {ban}!');
+    const r2 = await g.ask({ voice:true, hints:[
+      () => { $('handA').classList.add('glow'); return g.say('Con bấm nút “Đến lượt {ban}” nhé.'); },
+      () => g.say('Đến lượt {ban}!', 'happy') ] });
+    $('handA').classList.remove('glow'); $('handA').classList.add('hide');
+    const gave = r2.type !== 'none';
+    g.log({ k:'turn', tgt:'đưa lượt', r:r2.type, p:r2.prompt, ok:gave, ms:r2.ms, v:r2.voiceMs || 0 });
+    setTurn('B'); impulses = 0;
+    await g.say(gave ? 'Con đưa lượt rồi! Đến lượt {ban}. {ten} chờ nhé.' : 'Đến lượt {ban}. {ten} chờ nhé.');
+    // Bố mẹ bấm "Đặt khối". Không có ai bấm thì Cú đặt giúp sau một lúc.
+    const helped = await Promise.race([ new Promise(ok => { partnerTap = () => ok(false); }), wait((FAST ? 0.2 : S.waitSec * 2.5) * 1000).then(() => true) ]);
+    partnerTap = null; if(!g.alive()) return;
+    if(helped) setBubble(T('Cú đặt giúp {ban} nhé.'), '');
+    add();
+    g.log({ k:'wait', tgt:'chờ lượt', r:'tap', p:0, ok:impulses === 0, imp:impulses });
+    g.star(i, gave);
+    await g.say(impulses === 0 ? '{ten} chờ giỏi quá!' : 'Xong rồi!', impulses === 0 ? 'happy' : '');
+  }
+  setTurn(''); tower.appendChild(el('div', 'towerstar', '⭐')); sfx('finish');
+  await g.say('Tháp cao quá! {ten} và {ban} cùng xây xong rồi! Đập tay nào!', 'happy');
+  const hf = el('button', 'bigbtn alt', '✋ Đập tay!', () => answer('tap')); hf.style.margin = '16px auto 0'; hf.style.display = 'block';
+  g.stage.appendChild(hf);
+  await g.ask({ auto:() => answer('tap'), hints:[() => g.say('Con đập tay với {ban} nhé!')] });
+  hf.remove(); sfx('yay');
+}
+
+/* ── 6. CÚ ĐANG NHÌN GÌ? — chú ý chung: nhìn theo mắt Cú ──
+   Cấp 1: mắt + cánh chỉ + đồ vật sáng · Cấp 2: mắt + cánh · Cấp 3: chỉ mắt. Tự lên/xuống cấp. */
+async function gNhin(g){
+  const n = S.trials; setDots(n);
+  let lv = S.nhinLv || 1, streak = 0, miss = 0;
+  g.stage.innerHTML = '<div class="jawrap"><div class="jaslot p0" id="j0"></div><div class="jaslot p1" id="j1"></div><div class="jaslot p2" id="j2"></div><div class="jaslot p3" id="j3"></div><div class="jaowl" id="jaowl"></div></div>';
+  $('owlMini').style.visibility = 'hidden';
+  const DIR = [ {dx:-1, dy:-1, pt:'L', r:-8}, {dx:1, dy:-1, pt:'R', r:8}, {dx:-1, dy:1, pt:'L', r:-8}, {dx:1, dy:1, pt:'R', r:8} ];
+  const jo = $('jaowl');
+  for(let i = 0; i < n; i++){
+    const items = shuffle(Object.keys(IT)).slice(0, 4), slots = lv === 1 ? [0, 1] : [0, 1, 2, 3], t = pick(slots);
+    for(let s = 0; s < 4; s++){ const j = $('j' + s); j.className = 'jaslot p' + s; j.innerHTML = slots.includes(s) ? IT[items[s]].s : ''; j.style.opacity = slots.includes(s) ? 1 : 0; }
+    jo.innerHTML = owl(''); jo.style.setProperty('--r', '0deg');
+    await g.say(i === 0 ? 'Cú đang nhìn gì nhỉ? Con nhìn theo mắt Cú nhé.' : 'Cú nhìn gì đây?');
+    const d = DIR[t];
+    const cue = level => { jo.innerHTML = owl('', { dx:d.dx, dy:d.dy, point:level <= 2 ? d.pt : null }); jo.style.setProperty('--r', d.r + 'deg'); if(level === 1) $('j' + t).classList.add('glow'); };
+    cue(lv); sfx('whoosh');
+    let wrong = 0;
+    for(const s of slots){ $('j' + s).onclick = () => {
+      if(s === t) answer('tap', true);
+      else if(CUR){ wrong++; sfx('soft'); const j = $('j' + s); j.classList.remove('wiggle'); void j.offsetWidth; j.classList.add('wiggle'); cue(1); setBubble('Cú nhìn bên này nè.', 'soft'); }
+    }; }
+    const r = await g.ask({ auto:() => answer('tap', true), hints:[
+      () => { cue(Math.min(lv, 2)); return g.say('Cú nhìn bên này nè.'); },
+      () => { cue(1); return g.say(cap(IT[items[t]].f) + ' ở đâu nhỉ?'); },
+      () => g.say('Đây nè, ' + IT[items[t]].f + '!') ] });
+    const jt = $('j' + t); jt.classList.remove('glow'); jt.classList.add('jump');
+    const indep = r.type !== 'none' && r.prompt === 0 && wrong === 0;
+    sfx(r.type !== 'none' ? 'yay' : 'tap'); jo.innerHTML = owl('happy', { dx:d.dx, dy:d.dy });
+    await g.say(r.type !== 'none' ? 'Đúng rồi! Cú nhìn ' + IT[items[t]].f + '!' : 'Cú nhìn ' + IT[items[t]].f + ' nè.', r.type !== 'none' ? 'happy' : 'soft');
+    g.log({ k:'ja', tgt:'cấp ' + lv + ' · ' + IT[items[t]].n, r:r.type, p:r.prompt, ok:indep, ms:r.ms, err:wrong, lv });
+    g.star(i, r.type !== 'none');
+    if(!S.nhinLv){
+      if(indep){ streak++; miss = 0; if(streak >= 3 && lv < 3){ lv++; streak = 0; await g.say(lv === 2 ? 'Giỏi quá! Bây giờ đồ vật không sáng nữa nhé.' : 'Siêu quá! Bây giờ Cú chỉ nhìn bằng mắt thôi.', 'happy'); } }
+      else { streak = 0; if(++miss >= 2 && lv > 1){ lv--; miss = 0; } }
+    }
+    await g.wait(400);
+  }
+}
+
+/* ── 7. GƯƠNG MẶT CẢM XÚC — nhận ra cảm xúc, rồi đoán cảm xúc trong tình huống + lời quan tâm ── */
+const SITS = [ {t:'Bạn Na làm rơi que kem.', e:'buon', ic:() => MISC.kem, say:'Bạn có sao không?'},
+  {t:'Bạn Bi được tặng quà.', e:'vui', ic:() => MISC.qua, say:'Vui quá!'},
+  {t:'Bạn Tí bị giật mất ô tô đồ chơi.', e:'gian', ic:() => IT.xe.s, say:'Bạn bình tĩnh nhé.'},
+  {t:'Trời có tiếng sấm rất to.', e:'so', ic:() => MISC.sam, say:'Đừng sợ, có mình đây.'},
+  {t:'Bạn Mi được đi công viên.', e:'vui', ic:() => IT.hoa.s, say:'Vui quá!'},
+  {t:'Bạn Bo bị ngã đau chân.', e:'buon', ic:() => MISC.nga, say:'Bạn có đau không?'} ];
+async function gCamxuc(g){
+  const n = S.trials, half = Math.ceil(n / 2); setDots(n);
+  const sits = shuffle(SITS);
+  for(let i = 0; i < n; i++){
+    const phaseA = i < half;
+    const sit = phaseA ? null : sits[(i - half) % sits.length];
+    const target = phaseA ? pick(['vui','buon','gian','so']) : sit.e;
+    const others = shuffle(['vui','buon','gian','so'].filter(x => x !== target)).slice(0, i < 2 ? 1 : 2);
+    const opts = shuffle([target].concat(others));
+    g.stage.innerHTML = (sit ? '<div class="sitcard"><div class="si">' + sit.ic() + '</div><div>' + sit.t + '</div></div>' : '') + '<div class="pcards" id="faces"></div>';
+    const box = $('faces'); let wrong = 0;
+    opts.forEach(e => box.appendChild(el('button', 'pcard', face(e) + '<span class="facelbl"></span>', function(){
+      if(!CUR) return;
+      if(e === target) answer('tap', e);
+      else { wrong++; sfx('soft'); this.querySelector('.facelbl').textContent = EMO[e]; this.classList.add('dim');
+        box.children[opts.indexOf(target)].classList.add('glow');
+        setBubble('Bạn này đang ' + EMO[e] + '. Mình tìm bạn đang ' + EMO[target] + ' nhé.', 'soft'); }
+    })));
+    await g.say(phaseA ? 'Bạn nào đang ' + EMO[target] + '?' : sit.t + ' Bạn ấy thấy thế nào?');
+    const r = await g.ask({ auto:() => answer('tap', target), hints:[
+      () => g.say(phaseA ? 'Con tìm gương mặt đang ' + EMO[target] + ' nhé.' : 'Bạn ấy vui, buồn, giận hay sợ?'),
+      () => { box.children[opts.indexOf(target)].classList.add('glow'); return g.say('Bạn này nè. Bạn ấy đang ' + EMO[target] + '.'); } ] });
+    [...box.children].forEach((b, k) => { b.disabled = true; b.querySelector('.facelbl').textContent = EMO[opts[k]]; b.classList.remove('glow'); if(opts[k] === target) b.classList.add('sel'); });
+    const ok = r.type !== 'none';
+    if(ok) sfx('yay');
+    await g.say((ok ? 'Đúng rồi! ' : '') + (phaseA ? 'Bạn ấy đang ' + EMO[target] + '.' : 'Bạn ấy ' + EMO[target] + '.'), ok ? 'happy' : 'soft');
+    g.log({ k:'emo', tgt:EMO[target], r:r.type, p:r.prompt, ok:ok && wrong === 0, ms:r.ms, err:wrong });
+    let got = ok;
+    if(sit){
+      await g.say('Mình nói với bạn: ' + sit.say);
+      const v = await g.ask({ voice:true, hints:[ () => g.say('Con nói nhé: ' + sit.say, 'happy') ] });
+      if(v.type !== 'none'){ sfx('yay'); await g.say('Con nói hay quá! Bạn ấy thấy dễ chịu hơn rồi.', 'happy'); }
+      g.log({ k:'emp', tgt:sit.say, r:v.type, p:v.prompt, ok:v.type !== 'none', ms:v.ms, v:v.voiceMs || 0 });
+      got = got || v.type !== 'none';
+    }
+    g.star(i, got);
+    await g.wait(500);
+  }
+}
+
+/* ── 8. HÔM NAY CON THẤY THẾ NÀO? — nói cảm xúc của mình + lý do + xin điều mình cần ── */
+const REASON_POS = [ ['🧸','được chơi'], ['🍜','ăn ngon'], ['👫','gặp bạn'], ['🌳','được đi chơi'], ['🤗','được ôm'] ];
+const REASON_NEG = [ ['🤕','bị đau'], ['🔊','ồn quá'], ['😴','buồn ngủ'], ['💭','nhớ một người'], ['😣','không muốn làm'] ];
+async function gHomnay(g){
+  setDots(3);
+  const F = ['vui','thuong','buon','gian','met'];
+  g.stage.innerHTML = '<div class="pcards" id="fbox"></div>';
+  F.forEach(e => $('fbox').appendChild(el('button', 'pcard', face(e) + EMO[e], () => answer('tap', e))));
+  await g.say('Chào {ten}! Hôm nay con thấy thế nào?', 'happy');
+  const r1 = await g.ask({ auto:() => answer('tap', 'vui'), hints:[ () => g.say('Con chọn một gương mặt nhé.'), () => g.say('Vui, bình thường, buồn, giận, hay mệt?') ] });
+  if(r1.type === 'none'){ g.log({ k:'feel', tgt:'-', r:'none', p:r1.prompt, ok:false, ms:r1.ms }); g.star(0, false); await g.say('Không sao. Lúc nào muốn kể thì con chọn nhé.', 'soft'); return; }
+  const e = r1.value, neg = ['buon','gian','met'].includes(e);
+  sfx('tap'); g.star(0, true);
+  await g.say('Con thấy ' + EMO[e] + '.', neg ? 'soft' : 'happy');
+  // lý do
+  const reasons = (neg ? REASON_NEG : REASON_POS).concat([['🤷','con không biết']]);
+  g.stage.innerHTML = '<div style="width:110px;margin:0 auto 10px">' + face(e) + '</div><div class="pcards" id="rbox"></div>';
+  reasons.forEach(x => $('rbox').appendChild(el('button', 'pcard small', '<span class="em">' + x[0] + '</span>' + cap(x[1]), () => answer('card', x[1]))));
+  await g.say('Vì sao con thấy ' + EMO[e] + '?');
+  const r2 = await g.ask({ auto:() => answer('card', reasons[0][1]), hints:[ () => g.say('Con chọn một thẻ nhé. Không biết thì chọn “con không biết”.') ] });
+  const why = r2.value && r2.value !== 'con không biết' ? r2.value : null;
+  const sentence = 'Con thấy ' + EMO[e] + (why ? ' vì ' + why : '') + '.';
+  g.stage.innerHTML = '<div style="width:110px;margin:0 auto 10px">' + face(e) + '</div><div class="strip"><div class="sw hl">' + esc(sentence) + '</div></div>';
+  await g.say(sentence + ' Con nói cùng Cú nhé: ' + sentence);
+  const v = await g.ask({ voice:true, record:true, hints:[ () => g.say(sentence) ] });
+  if(v.rec) recSave(v.rec, 'homnay', sentence);
+  g.star(1, r2.type !== 'none' || v.type !== 'none');
+  if(v.type !== 'none'){ sfx('yay'); await g.say('Cảm ơn con đã kể cho Cú nghe.', 'happy'); }
+  let act = null;
+  if(neg){
+    const ACT = [ ['🤗','ôm ' + S.partner.toLowerCase()], ['💧','uống nước'], ['🛋️','nghỉ một chút'], ['🌬️','thở cùng Cú'] ];
+    g.stage.innerHTML = '<div class="pcards" id="abox"></div>';
+    ACT.forEach(x => $('abox').appendChild(el('button', 'pcard small', '<span class="em">' + x[0] + '</span>' + cap(x[1]), () => answer('card', x[1]))));
+    await g.say('Con muốn làm gì cho dễ chịu hơn?', 'soft');
+    const r3 = await g.ask({ auto:() => answer('card', 'thở cùng Cú'), hints:[ () => g.say('Con chọn một thẻ nhé.') ] });
+    act = r3.value || null;
+    if(act === 'thở cùng Cú') await breathe(g);
+    else if(act){
+      g.stage.innerHTML = '<div class="forparent">' + T('{ban} ơi,') + '<br>con muốn ' + esc(act) + '.</div>';
+      await g.say('{ban} ơi, con muốn ' + act + '.', 'happy');
+    }
+  } else {
+    g.stage.innerHTML = '<div class="forparent">' + T('{ban} ơi,') + '<br>' + esc(sentence.replace(/^Con/, 'hôm nay con')) + '</div>';
+    await g.say('{ban} ơi, hôm nay ' + sentence.charAt(0).toLowerCase() + sentence.slice(1), 'happy');
+  }
+  LOG.feel.push({ d:Date.now(), e, why:why || '', act:act || '' }); saveLog();
+  g.log({ k:'feel', tgt:EMO[e] + (why ? ' · ' + why : ''), r:v.type !== 'none' ? v.type : 'card', p:Math.max(r1.prompt, r2.prompt), ok:true, ms:r1.ms, v:v.voiceMs || 0 });
+  g.star(2, true);
+}
+async function breathe(g){
+  g.stage.innerHTML = '<div class="breath"><div class="bo" id="bo">' + owl('happy') + '</div><div class="bt" id="bt"></div></div>';
+  for(let k = 0; k < 3; k++){
+    $('bt').textContent = 'Hít vào… 🌬️'; $('bo').style.transform = 'scale(1.18)'; sfx('breathIn'); await g.say('Hít vào…'); await g.wait(2600);
+    $('bt').textContent = 'Thở ra… 🍃'; $('bo').style.transform = 'scale(1)'; sfx('breathOut'); await g.say('Thở ra…'); await g.wait(2600);
+  }
+  await g.say('Con thở giỏi lắm. Bây giờ con thấy dễ chịu hơn chưa?', 'happy');
+}
+
+/* ── 9. ĐIỆN THOẠI CỦA CÚ — hội thoại có lượt lời, và quan trọng nhất: con HỎI LẠI Cú ── */
+async function gPhone(g){
+  const turns = [
+    { tag:'chào', q:'A lô! Cú đây. Chào bạn!', cards:[['👋','Chào Cú!']], ack:() => 'Cú vui lắm khi nghe giọng bạn!' },
+    { tag:'tên', q:'Bạn tên là gì?', cards:[['🙋','Con tên là ' + S.name + '.']], ack:() => 'Tên ' + S.name + ' hay quá!' },
+    { tag:'ăn', q:'Hôm nay bạn ăn gì?', cards:[['🍚','Cơm'],['🍜','Phở'],['🥖','Bánh mì'],['🥛','Sữa']], ack:x => x ? 'Ồ, ' + x.toLowerCase() + '! Ngon quá!' : 'Nghe ngon quá!' },
+    { tag:'hỏi lại', k:'ask', q:'Bây giờ bạn hỏi Cú đi!', cards:[['🍽️','Cú ăn gì?'],['❓','Cú đang làm gì?'],['💚','Cú có khoẻ không?']],
+      ack:x => ({ 'Cú ăn gì?':'Cú ăn hạt và sâu nhỏ. Hi hi!', 'Cú đang làm gì?':'Cú đang nói chuyện với bạn nè!', 'Cú có khoẻ không?':'Cú khoẻ lắm, cảm ơn bạn đã hỏi!' }[x] || 'Bạn hỏi Cú rồi! Cú vui quá!') },
+    { tag:'chơi', q:'Còn bạn thì sao? Bạn thích chơi gì?', cards:[['⚽','Bóng'],['🚗','Xe'],['🧩','Xếp hình'],['🖍️','Vẽ']], ack:x => x ? 'Cú cũng thích ' + x.toLowerCase() + '!' : 'Hay quá!' },
+    { tag:'tạm biệt', q:'Cú phải đi rồi. Tạm biệt bạn nhé!', cards:[['👋','Tạm biệt Cú!']], ack:() => 'Tạm biệt! Mai mình nói chuyện tiếp nhé!' },
+  ];
+  setDots(turns.length + 1);
+  g.stage.innerHTML = '<div class="phonewrap"><div class="phone" id="phone"><div class="screen">'
+    + '<div class="phead"><div class="pav">' + owl('happy') + '</div><span id="pst">Cú đang gọi…</span></div><div class="chat" id="chat"></div>'
+    + '<div class="callbtns"><button class="cbtn g" id="cg" aria-label="Nghe máy">📞</button><button class="cbtn r" id="cr" aria-label="Tắt máy" disabled>✖</button></div></div></div>'
+    + '<div class="answers" id="ans"></div></div>';
+  const chat = $('chat'), ans = $('ans'), phone = $('phone');
+  const msg = (who, t) => { const m = el('div', 'msg ' + who, esc(t)); chat.appendChild(m); chat.scrollTop = chat.scrollHeight; };
+  // 1. chuông reo
+  phone.classList.add('ringing'); let ringing = true;
+  (async () => { while(ringing && g.alive()){ sfx('ring'); await wait(1600); } })();
+  $('cg').onclick = () => { if(CUR) answer('tap'); };
+  await g.say('Reng reng! Có ai gọi kìa. Con bấm nút xanh để nghe nhé.', 'happy');
+  const r0 = await g.ask({ auto:() => answer('tap'), hints:[ () => { $('cg').classList.add('glow'); return g.say('Nút màu xanh nè.'); } ] });
+  ringing = false; phone.classList.remove('ringing'); $('cg').classList.remove('glow'); $('cg').disabled = true; $('cr').disabled = false; sfx('connect');
+  $('pst').textContent = 'Đang nói chuyện với Cú'; g.star(0, r0.type !== 'none');
+  // 2. các lượt lời
+  for(let i = 0; i < turns.length; i++){
+    const tu = turns[i];
+    ans.innerHTML = '';
+    tu.cards.forEach(c => ans.appendChild(el('button', 'tcard', '<span class="em">' + c[0] + '</span>' + esc(c[1]), () => answer('card', c[1]))));
+    msg('o', tu.q); await g.say(tu.q, 'happy');
+    const r = await g.ask({ voice:true, record:true, hints:[
+      () => g.say(tu.k === 'ask' ? 'Con chọn một câu để hỏi Cú nhé.' : 'Con trả lời Cú nhé.'),
+      () => { ans.firstChild.classList.add('glow'); return g.say('Con nói: ' + tu.cards[0][1]); } ] });
+    [...ans.children].forEach(b => { b.disabled = true; b.classList.remove('glow'); });
+    if(r.type === 'card'){ msg('c', r.value); await speakP(r.value, { pitch:1.35, child:true }); }
+    else if(r.type === 'voice' || r.type === 'parent'){ msg('c', '🎤 (con nói)'); if(r.rec){ await playRec(r.rec, 1); recSave(r.rec, 'dienthoai', tu.q); } }
+    else msg('c', '…');
+    const reply = tu.ack(r.type === 'card' ? r.value : null);
+    if(r.type !== 'none') sfx('pop');
+    msg('o', reply); await g.say(reply, 'happy');
+    g.log({ k:tu.k || 'conv', tgt:tu.tag, r:r.type, p:r.prompt, ok:r.type !== 'none', ms:r.ms, v:r.voiceMs || 0 });
+    g.star(i + 1, r.type !== 'none');
+  }
+  // 3. tắt máy
+  ans.innerHTML = '';
+  $('cr').onclick = () => { if(CUR) answer('tap'); };
+  await g.say('Con bấm nút đỏ để tắt máy nhé.');
+  await g.ask({ auto:() => answer('tap'), hints:[ () => { $('cr').classList.add('glow'); return g.say('Nút màu đỏ nè.'); } ] });
+  $('cr').classList.remove('glow'); $('cr').disabled = true; $('pst').textContent = 'Đã tắt máy'; sfx('tap');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   8. DANH SÁCH TRÒ CHƠI — thêm trò mới chỉ cần thêm 1 dòng ở đây
+   ═══════════════════════════════════════════════════════════════════════ */
+const GROUPS = { noi:['Nói ra tiếng','#E8F0F7','#4B7BA8'], xin:['Xin và chọn','#E6F2EC','#5B9E7E'], cung:['Chơi cùng nhau','#FBEDEF','#C27884'],
+  camxuc:['Hiểu cảm xúc','#FBF0DF','#A9743F'], tc:['Trò chuyện','#EFEBF8','#7A69AE'] };
+const GAMES = [
+  { id:'bong',     name:'Thổi bóng bay',          grp:'noi',    mic:true, run:gBong,    ic:() => balloonSVG('#E39AA6'), goal:'Phát ra tiếng (bất kỳ âm nào)' },
+  { id:'convat',   name:'Con vật kêu thế nào?',   grp:'noi',    mic:true, run:gConvat,  ic:() => ANI.cho, goal:'Bắt chước âm thanh, nghe lại giọng mình' },
+  { id:'vet',      name:'Chú vẹt nhại lời',       grp:'noi',    mic:true, run:gVet,     ic:() => parrot(true), goal:'Chọn 1 từ và nói từ đơn' },
+  { id:'muon',     name:'Con muốn gì?',           grp:'xin',    mic:true, run:gMuon,    ic:() => IT.banh.s, goal:'Yêu cầu bằng thẻ hình → từ → câu' },
+  { id:'luot',     name:'Đến lượt ai?',           grp:'cung',   mic:true, run:gLuot,    ic:() => '<svg viewBox="0 0 100 100"><rect x="30" y="70" width="40" height="14" rx="3" fill="#4B7BA8"/><rect x="30" y="54" width="40" height="14" rx="3" fill="#E39AA6"/><rect x="30" y="38" width="40" height="14" rx="3" fill="#E4B84D"/><rect x="30" y="22" width="40" height="14" rx="3" fill="#5B9E7E"/></svg>', goal:'Chờ lượt và đưa lượt cho người khác' },
+  { id:'nhin',     name:'Cú đang nhìn gì?',       grp:'cung',   mic:false, run:gNhin,   ic:() => owl('', { dx:1, dy:-1, point:'R' }), goal:'Chú ý chung — nhìn theo ánh mắt' },
+  { id:'camxuc',   name:'Gương mặt cảm xúc',      grp:'camxuc', mic:true, run:gCamxuc,  ic:() => face('vui'), goal:'Nhận ra cảm xúc, nói lời quan tâm' },
+  { id:'homnay',   name:'Hôm nay con thấy thế nào?', grp:'camxuc', mic:true, run:gHomnay, ic:() => face('thuong'), goal:'Nói cảm xúc của mình và điều mình cần' },
+  { id:'dienthoai',name:'Điện thoại của Cú',      grp:'tc',     mic:true, run:gPhone,   ic:() => '<svg viewBox="0 0 100 100"><rect x="28" y="8" width="44" height="84" rx="10" fill="#2E3D50"/><rect x="33" y="18" width="34" height="60" rx="4" fill="#E6F0F7"/><circle cx="50" cy="85" r="3.5" fill="#fff"/><circle cx="50" cy="44" r="10" fill="#A9743F"/></svg>', goal:'Hội thoại có lượt lời, hỏi lại người khác' },
+];
+const gameById = id => GAMES.find(x => x.id === id);
+
+/* ═══════════════════════════════════════════════════════════════════════
+   9. MỞ TRÒ / KẾT THÚC / TRANG CHỦ
+   ═══════════════════════════════════════════════════════════════════════ */
+async function openGame(id){
+  const def = gameById(id); if(!def) return;
+  stopAll(); const rid = RUN;
+  ensureCtx(); if(audioCtx){ try{ audioCtx.resume(); }catch(e){} } startMusic();
+  const sess = { id:Date.now(), g:id, s:Date.now(), e:Date.now(), fin:false, tr:[] };
+  LOG.sessions.push(sess); saveLog();
+  G = { def, rid, sess, stars:[], total:0 };
+  $('gTitle').textContent = def.name; $('gDots').innerHTML = ''; $('stage').innerHTML = '';
+  $('owlMini').style.visibility = '';
+  setBubble('', 'happy'); screen('screenGame');
+  if(def.mic && S.micMode !== 'parent' && !Mic.ok && !Mic.tried){
+    setBubble(T('Cú muốn nghe giọng của {ten}. Bố mẹ bấm “Cho phép” micro nhé.'), 'happy');
+    const ok = await micInit();
+    if(rid !== RUN) return;
+    if(!ok) toast('Micro chưa bật — không sao, bố mẹ bấm nút “👪 Con đã nói” khi con nói nhé.', 5000);
+  }
+  try{ await def.run(ctx(rid)); if(rid === RUN) finishGame(false); }
+  catch(e){ if(e !== STOP) console.error(e); }
+}
+$('doneBtn').onclick = async () => {
+  if(!G) return;
+  stopAll();
+  // Con TỰ xin dừng là một hành vi giao tiếp quan trọng → ghi lại và tôn trọng ngay
+  G.sess.tr.push({ at:Date.now(), k:'brk', tgt:'xong rồi', r:'tap', p:0, ok:true }); saveLog();
+  $('stage').innerHTML = '';
+  setBubble(T('Con muốn nghỉ. Được nhé, {ten}!'), 'happy');
+  await speakP('Con muốn nghỉ. Được nhé!');
+  finishGame(true);
+};
+$('parentOK').onclick = () => { if(CUR && CUR.o.voice) answer('parent'); };
+$('replayBtn').onclick = async () => { if(!lastLine) return; const was = Mic.paused; Mic.paused = true; await speakP(lastLine); Mic.paused = was; };
+
+function finishGame(byBreak){
+  if(!G) return;
+  stopAll();
+  G.sess.e = Date.now(); G.sess.fin = !byBreak || G.stars.filter(x => x !== undefined).length >= Math.ceil(G.total / 2); saveLog();
+  const got = G.stars.filter(Boolean).length, voiced = G.sess.tr.filter(isVoice).length;
+  $('endOwl').innerHTML = owl('happy');
+  $('endTitle').textContent = byBreak ? 'Mình nghỉ nhé!' : 'Xong rồi! Giỏi quá!';
+  $('endStars').textContent = got ? '⭐'.repeat(got) : '🌟';
+  $('endText').textContent = voiced ? T('Hôm nay {ten} đã nói ' + voiced + ' lần với Cú. Cú vui lắm!')
+    : got ? T('{ten} đã chơi ' + got + ' lượt cùng Cú. Cú vui lắm!') : T('Cảm ơn {ten} đã chơi cùng Cú.');
+  const nextId = S.schedule.find(id => id !== G.def.id && !doneToday(id));
+  const b = $('endBtns'); b.innerHTML = '';
+  if(nextId && !byBreak) b.appendChild(el('button', 'bigbtn alt', 'Tiếp theo: ' + gameById(nextId).name + ' →', () => openGame(nextId)));
+  b.appendChild(el('button', 'bigbtn' + (nextId && !byBreak ? ' ghost' : ''), '🏠 Về nhà', goHome));
+  b.appendChild(el('button', 'bigbtn ghost', '🔄 Chơi lại', () => openGame(G.def.id)));
+  screen('screenEnd'); sfx('finish');
+  speakP(byBreak ? 'Mình nghỉ nhé. Hẹn gặp lại!' : 'Xong rồi! Con giỏi quá!');
+}
+const todaySessions = () => LOG.sessions.filter(s => dkey(s.s) === dkey(Date.now()));
+const doneToday = id => todaySessions().some(s => s.g === id && s.fin);
+function goHome(){
+  stopAll(); G = null;
+  $('homeOwl').innerHTML = owl('happy');
+  $('homeHello').textContent = 'Chào ' + S.name + '!';
+  const acts = todaySessions().reduce((n, s) => n + s.tr.filter(isAct).length, 0);
+  $('homeStars').textContent = acts ? '⭐ Hôm nay con đã giao tiếp ' + acts + ' lần' : '⭐ Mình bắt đầu nhé!';
+  const row = $('schedRow'); row.innerHTML = '';
+  const sch = S.schedule.filter(gameById); let nextMarked = false;
+  sch.forEach((id, i) => {
+    const d = gameById(id), done = doneToday(id);
+    const b = el('button', 'sstep' + (done ? ' done' : (!nextMarked ? ' next' : '')), '<span class="num">' + (done ? '✓' : i + 1) + '</span><span class="si">' + d.ic() + '</span><span>' + d.name + '</span>', () => openGame(id));
+    if(!done) nextMarked = true;
+    row.appendChild(b); if(i < sch.length - 1) row.appendChild(el('span', 'sarrow', '→'));
+  });
+  if(!sch.length) row.innerHTML = '<span style="color:var(--ink3);font-weight:700">Bố mẹ chọn lịch trong Khu bố mẹ › Cài đặt.</span>';
+  const grid = $('gameGrid'); grid.innerHTML = '';
+  GAMES.forEach(d => {
+    const gr = GROUPS[d.grp], n = todaySessions().filter(s => s.g === d.id).length;
+    grid.appendChild(el('button', 'gcard', '<div class="gi">' + d.ic() + '</div><div class="gn">' + d.name + '</div>'
+      + '<span class="gt" style="background:' + gr[1] + ';color:' + gr[2] + '">' + gr[0] + '</span><div class="gs">' + (n ? '✓ hôm nay ' + n + ' lần' : '') + '</div>', () => openGame(d.id)));
+  });
+  screen('screenHome');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   10. KHU BỐ MẸ — giữ nút 2 giây (để con không vô tình mở)
+   ═══════════════════════════════════════════════════════════════════════ */
+(function parentGate(){
+  const b = $('parentBtn'), f = $('parentFill'); let t0 = 0, raf = 0;
+  const reset = () => { cancelAnimationFrame(raf); t0 = 0; f.style.width = '0'; };
+  const tick = () => { const p = Math.min(1, (performance.now() - t0) / 2000); f.style.width = (p * 100) + '%'; if(p >= 1){ reset(); openParent(); } else raf = requestAnimationFrame(tick); };
+  b.addEventListener('pointerdown', e => { e.preventDefault(); t0 = performance.now(); raf = requestAnimationFrame(tick); });
+  ['pointerup','pointerleave','pointercancel'].forEach(ev => b.addEventListener(ev, () => { if(t0 && performance.now() - t0 < 2000) toast('Bố mẹ giữ nút này 2 giây để mở nhật ký.'); reset(); }));
+  b.addEventListener('contextmenu', e => e.preventDefault());
+})();
+let pTab = 'tong';
+const PT = [['tong','📊 Tổng quan'],['tro','🎮 Từng trò'],['nk','📒 Nhật ký'],['cx','💛 Cảm xúc'],['giong','🎤 Giọng của con'],['cai','⚙️ Cài đặt']];
+function openParent(){ stopAll(); G = null; screen('screenParent'); renderParent(); }
+function renderParent(){
+  const tabs = $('pTabs'); tabs.innerHTML = '';
+  PT.forEach(t => tabs.appendChild(el('button', 'ptab' + (pTab === t[0] ? ' on' : ''), t[1], () => { pTab = t[0]; renderParent(); })));
+  tabs.appendChild(el('button', 'ptab', '🏠 Về trang chơi', goHome));
+  const p = $('pPanel');
+  ({ tong:pTong, tro:pTro, nk:pNhatky, cx:pCamxuc, giong:pGiong, cai:pCai })[pTab](p);
+}
+const allTrials = () => LOG.sessions.flatMap(s => s.tr.map(t => Object.assign({ g:s.g }, t)));
+function dayStats(k){
+  const tr = allTrials().filter(t => dkey(t.at) === k);
+  const acts = tr.filter(isAct);
+  const ses = LOG.sessions.filter(s => dkey(s.s) === k);
+  return { acts:acts.length, indep:acts.filter(t => !t.p).length, helped:acts.filter(t => t.p).length,
+    voice:tr.filter(isVoice).length, vms:tr.reduce((n, t) => n + (t.v || 0), 0), none:tr.filter(t => t.r === 'none').length,
+    mins:Math.round(ses.reduce((n, s) => n + Math.max(0, (s.e || s.s) - s.s), 0) / 60000), games:ses.length };
+}
+function pTong(p){
+  const today = dkey(Date.now()), d = dayStats(today);
+  const days = []; for(let i = 13; i >= 0; i--) days.push(dkey(Date.now() - i * 86400000));
+  const st = days.map(dayStats), max = Math.max(4, ...st.map(x => x.acts));
+  const W = 640, H = 190, bw = W / days.length;
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + (H + 24) + '" role="img" aria-label="Số lần giao tiếp 14 ngày">';
+  [0.5, 1].forEach(f => { const y = H - f * (H - 10); svg += '<line x1="0" x2="' + W + '" y1="' + y + '" y2="' + y + '" stroke="#E6DFD3"/><text x="2" y="' + (y - 3) + '" font-size="10" fill="#8A99AC">' + Math.round(f * max) + '</text>'; });
+  st.forEach((x, i) => {
+    const h1 = x.indep / max * (H - 10), h2 = x.helped / max * (H - 10), cx = i * bw + bw * 0.2, w = bw * 0.6;
+    svg += '<rect x="' + cx + '" y="' + (H - h1) + '" width="' + w + '" height="' + h1 + '" rx="2" fill="#5B9E7E"><title>' + ddmm(days[i]) + ': tự làm ' + x.indep + '</title></rect>';
+    svg += '<rect x="' + cx + '" y="' + (H - h1 - h2) + '" width="' + w + '" height="' + h2 + '" rx="2" fill="#E4B84D"><title>' + ddmm(days[i]) + ': có gợi ý ' + x.helped + '</title></rect>';
+    svg += '<text x="' + (cx + w / 2) + '" y="' + (H + 16) + '" font-size="10" text-anchor="middle" fill="#8A99AC">' + ddmm(days[i]) + '</text>';
+  });
+  svg += '</svg>';
+  // Mốc phát triển — lần ĐẦU TIÊN con làm được điều gì đó
+  const tr = allTrials().sort((a, b) => a.at - b.at);
+  const first = f => { const x = tr.find(f); return x ? new Date(x.at).toLocaleDateString('vi-VN') : null; };
+  const MS = [
+    ['🗣️','Lần đầu con tự phát ra tiếng (không cần gợi ý)', first(t => t.r === 'voice' && !t.p)],
+    ['🦜','Lần đầu con bắt chước một âm / một từ', first(t => t.k === 'imit' && isVoice(t))],
+    ['🙋','Lần đầu con dùng thẻ để xin đồ', first(t => t.k === 'mand' && t.r !== 'none')],
+    ['💬','Lần đầu con NÓI để xin đồ', first(t => t.k === 'mand' && isVoice(t))],
+    ['➕','Lần đầu con xin “Nữa”', first(t => t.k === 'mand' && t.tgt === 'nữa')],
+    ['👉','Lần đầu con tự đưa lượt cho người khác', first(t => t.k === 'turn' && t.r !== 'none' && !t.p)],
+    ['👀','Lần đầu con nhìn theo mắt Cú ở cấp 3 (chỉ mắt)', first(t => t.k === 'ja' && t.lv === 3 && t.ok)],
+    ['💛','Lần đầu con nói lời quan tâm bạn', first(t => t.k === 'emp' && isVoice(t))],
+    ['❓','Lần đầu con HỎI LẠI người khác', first(t => t.k === 'ask' && t.r !== 'none')],
+    ['✋','Lần đầu con tự bấm “Xong rồi” để xin nghỉ', first(t => t.k === 'brk')],
+  ];
+  p.innerHTML = '<h3>Hôm nay (' + ddmm(today) + ')</h3><div class="kpis">'
+    + '<div class="kpi g"><b>' + d.acts + '</b>lần giao tiếp</div>'
+    + '<div class="kpi"><b>' + (d.acts ? Math.round(d.indep / d.acts * 100) : 0) + '%</b>con tự làm, không cần gợi ý</div>'
+    + '<div class="kpi p"><b>' + d.voice + '</b>lần con nói ra tiếng (' + (d.vms / 1000).toFixed(1) + ' giây)</div>'
+    + '<div class="kpi h"><b>' + d.mins + '</b>phút chơi · ' + d.games + ' trò</div></div>'
+    + '<h4>14 ngày gần nhất — số lần giao tiếp</h4><div class="legend"><span><i style="background:#5B9E7E"></i>Con tự làm</span><span><i style="background:#E4B84D"></i>Có gợi ý / làm mẫu</span></div>'
+    + '<div class="chartbox">' + svg + '</div>'
+    + '<h4>🌱 Mốc phát triển</h4>' + MS.map(m => '<div class="ms' + (m[2] ? '' : ' no') + '"><span class="mi">' + m[0] + '</span><span style="flex:1">' + m[1] + '</span><b>' + (m[2] || 'chưa có') + '</b></div>').join('')
+    + '<h4>📝 Ghi chú của bố mẹ hôm nay</h4><textarea id="noteBox" placeholder="Ví dụ: hôm nay con tự nói “bánh” lúc ăn sáng…">' + esc(LOG.notes[today] || '') + '</textarea>'
+    + '<p class="note">“Giao tiếp” = mọi lần con phản hồi: nói, chạm thẻ, bấm, nhìn đúng chỗ. “Tự làm” = con phản hồi trước khi Cú phải gợi ý. Đây là số liệu tham khảo để bố mẹ và chuyên viên theo dõi xu hướng, không phải bài kiểm tra.</p>';
+  $('noteBox').oninput = e => { LOG.notes[today] = e.target.value; saveLog(); };
+}
+function pTro(p){
+  const tr = allTrials();
+  const rows = GAMES.map(d => {
+    const t = tr.filter(x => x.g === d.id && x.k !== 'wait' && x.k !== 'brk'), a = t.filter(isAct);
+    const ses = LOG.sessions.filter(s => s.g === d.id);
+    const last = ses.length ? new Date(ses[ses.length - 1].s).toLocaleDateString('vi-VN') : '—';
+    const avgP = a.length ? (a.reduce((n, x) => n + (x.p || 0), 0) / a.length).toFixed(1) : '—';
+    const recent = a.slice(-10), pct = recent.length ? Math.round(recent.filter(x => !x.p).length / recent.length * 100) + '%' : '—';
+    return '<tr><td><b>' + d.name + '</b><br><small style="color:var(--ink3)">' + d.goal + '</small></td><td>' + ses.length + '</td><td>' + a.length + '/' + t.length + '</td><td>' + pct + '</td><td>' + avgP + '</td><td>' + t.filter(isVoice).length + '</td><td>' + last + '</td></tr>';
+  }).join('');
+  const waits = tr.filter(t => t.k === 'wait'), wOk = waits.filter(t => t.ok).length;
+  p.innerHTML = '<h3>Từng trò chơi</h3><div class="tblwrap"><table class="pt"><tr><th>Trò</th><th>Số buổi</th><th>Phản hồi / lượt</th><th>Tự làm (10 lượt gần nhất)</th><th>Mức gợi ý TB (0–3)</th><th>Lần nói</th><th>Lần cuối</th></tr>' + rows + '</table></div>'
+    + '<h4>⏳ Chờ lượt (trò “Đến lượt ai?”)</h4><p>' + (waits.length ? 'Con chờ được mà không bấm sang lượt người khác: <b>' + wOk + '/' + waits.length + '</b> lần.' : 'Chưa có dữ liệu.') + '</p>'
+    + '<p class="note">Mức gợi ý: 0 = con tự làm · 1 = Cú nhắc lại · 2 = Cú gợi rõ / làm sáng · 3 = Cú làm mẫu. Khi “tự làm” ổn định trên 80% qua 3 buổi, bố mẹ có thể tăng cấp (Cài đặt) hoặc giảm thời gian chờ.</p>';
+}
+function pNhatky(p){
+  const ses = LOG.sessions.slice().reverse().slice(0, 40);
+  const R = { voice:'🎤 nói', parent:'👪 nói (bố mẹ xác nhận)', card:'🃏 chọn thẻ', tap:'👆 chạm', none:'— chưa phản hồi' };
+  p.innerHTML = '<h3>Nhật ký từng buổi</h3><p class="note">40 buổi gần nhất. Mỗi dòng là một lượt.</p>'
+    + (ses.length ? ses.map(s => {
+      const d = gameById(s.g);
+      return '<h4>' + new Date(s.s).toLocaleDateString('vi-VN') + ' ' + hhmm(s.s) + ' · ' + (d ? d.name : s.g) + (s.fin ? '' : ' (dừng giữa chừng)') + '</h4>'
+        + (s.tr.length ? '<div class="tblwrap"><table class="pt"><tr><th>Giờ</th><th>Kỹ năng</th><th>Mục tiêu</th><th>Con phản hồi</th><th>Gợi ý</th><th>Chờ</th></tr>'
+        + s.tr.map(t => '<tr><td>' + hhmm(t.at) + '</td><td>' + (SKILL[t.k] || t.k) + '</td><td>' + esc(t.tgt || '') + '</td><td>' + (R[t.r] || t.r) + (t.v ? ' · ' + (t.v / 1000).toFixed(1) + 's' : '') + (t.err ? ' · chọn nhầm ' + t.err : '') + (t.imp ? ' · bấm sớm ' + t.imp : '') + '</td><td>' + (t.p || 0) + '</td><td>' + (t.ms ? (t.ms / 1000).toFixed(1) + 's' : '') + '</td></tr>').join('') + '</table></div>' : '<p class="note">Không có lượt nào.</p>');
+    }).join('') : '<p>Chưa có buổi chơi nào.</p>');
+}
+function pCamxuc(p){
+  const f = LOG.feel.slice().reverse().slice(0, 30);
+  p.innerHTML = '<h3>Con kể cảm xúc</h3><p class="note">Từ trò “Hôm nay con thấy thế nào?”.</p>'
+    + (f.length ? '<div class="feelrow">' + f.map(x => '<div class="feel">' + face(x.e) + '<b>' + EMO[x.e] + '</b><br>' + esc(x.why || '') + (x.act ? '<br>→ ' + esc(x.act) : '') + '<br>' + new Date(x.d).toLocaleDateString('vi-VN') + '</div>').join('') + '</div>' : '<p>Chưa có.</p>');
+}
+async function pGiong(p){
+  p.innerHTML = '<h3>Giọng của con</h3><p class="note">Những lần micro ghi được tiếng con (lưu trong máy này, tối đa 80 đoạn mới nhất). Không gửi đi đâu cả.</p><div id="recBox">Đang tải…</div>';
+  const list = (await recList()).sort((a, b) => b.id - a.id), box = $('recBox');
+  if(!box) return;
+  if(!list.length){ box.innerHTML = '<p>Chưa có đoạn ghi âm nào. (Cần bật micro trong các trò có 🎤.)</p>'; return; }
+  box.innerHTML = '';
+  list.forEach(r => {
+    const d = gameById(r.game), row = el('div', 'rec');
+    row.appendChild(el('button', 'smallbtn', '▶ Nghe', () => playRec(r, 1)));
+    row.appendChild(el('div', 'rl', '<b>' + esc(r.label || '') + '</b><br><small style="color:var(--ink3)">' + (d ? d.name : r.game) + ' · ' + new Date(r.id).toLocaleString('vi-VN') + '</small>'));
+    row.appendChild(el('button', 'smallbtn red', 'Xoá', async () => { await recDel(r.id); row.remove(); }));
+    box.appendChild(row);
+  });
+}
+function pCai(p){
+  const opt = (v, list) => list.map(o => '<option value="' + o[0] + '"' + (String(v) === String(o[0]) ? ' selected' : '') + '>' + o[1] + '</option>').join('');
+  p.innerHTML = '<h3>Cài đặt</h3>'
+    + '<div class="frow"><label>Tên của con<small>Cú sẽ gọi con bằng tên này</small></label><input type="text" id="sName" value="' + esc(S.name) + '" maxlength="20"></div>'
+    + '<div class="frow"><label>Người chơi cùng<small>Dùng trong “Đến lượt ai?”, “Hôm nay con thấy thế nào?”</small></label><input type="text" id="sPartner" value="' + esc(S.partner) + '" maxlength="20"></div>'
+    + '<div class="frow"><label>Cách nghe con nói<small>Micro chỉ nghe “có tiếng hay không”, không chấm đúng sai</small></label><select id="sMic">' + opt(S.micMode, [['auto','Micro + nút 👪 cho bố mẹ'],['parent','Chỉ nút 👪 (không dùng micro)']]) + '</select></div>'
+    + '<div class="frow"><label>Độ nhạy micro<small>Phòng ồn → Thấp · Con nói nhỏ → Cao</small></label><select id="sSens">' + opt(S.sens, [['thap','Thấp'],['vua','Vừa'],['cao','Cao']]) + '</select></div>'
+    + '<div class="frow"><label>Chờ trước khi gợi ý<small>Nhiều trẻ cần 5–10 giây để phản hồi. Đừng giảm quá sớm.</small></label><select id="sWait">' + opt(S.waitSec, [[3,'3 giây'],[5,'5 giây'],[8,'8 giây'],[12,'12 giây']]) + '</select></div>'
+    + '<div class="frow"><label>Số lượt mỗi trò</label><select id="sTrials">' + opt(S.trials, [[4,'4 lượt'],[6,'6 lượt'],[8,'8 lượt']]) + '</select></div>'
+    + '<div class="frow"><label>Cấp “Con muốn gì?”</label><select id="sMuon">' + opt(S.muonLv, [[1,'1 — chạm thẻ (2 lựa chọn)'],[2,'2 — chạm + nói 1 từ (3 lựa chọn)'],[3,'3 — nói cả câu (4 lựa chọn)']]) + '</select></div>'
+    + '<div class="frow"><label>Cấp “Cú đang nhìn gì?”</label><select id="sNhin">' + opt(S.nhinLv, [[0,'Tự động lên/xuống'],[1,'1 — mắt + cánh + đồ vật sáng'],[2,'2 — mắt + cánh'],[3,'3 — chỉ ánh mắt']]) + '</select></div>'
+    + '<div class="frow"><label>Tắt mọi chuyển động<small>Cho bé nhạy cảm thị giác</small></label><input type="checkbox" id="sCalm"' + (S.calm ? ' checked' : '') + '></div>'
+    + '<div class="frow"><label>Lịch hôm nay<small>Chọn 1–4 trò, theo thứ tự bấm</small></label><div class="chk" id="sSched">' + GAMES.map(d => '<label><input type="checkbox" value="' + d.id + '"' + (S.schedule.includes(d.id) ? ' checked' : '') + '> ' + d.name + '</label>').join('') + '</div></div>'
+    + '<div class="frow"><label>Giọng đọc tiếng Việt<small>' + (viVoice ? '✅ Có: ' + esc(viVoice.name) : '⚠️ Máy chưa có giọng tiếng Việt. iPad/iPhone: Cài đặt › Trợ năng › Nội dung được đọc › Giọng nói › Tiếng Việt. Android: cài “Dịch vụ lời nói của Google” + tiếng Việt. Khi chưa có, bố mẹ đọc chữ trong bóng nói cho con.') + '</small></label><button class="smallbtn" id="tVoice">🔊 Thử giọng</button></div>'
+    + '<div class="frow"><label>Kiểm tra micro<small id="micInfo">' + (Mic.ok ? '✅ Micro đã bật' : 'Bấm để thử') + '</small></label><button class="smallbtn" id="tMic">🎤 Thử micro</button></div>'
+    + '<h4>Dữ liệu</h4><div class="chk"><button class="smallbtn" id="xJson">⬇ Tải nhật ký (JSON)</button><button class="smallbtn" id="xCsv">⬇ Tải bảng lượt chơi (CSV – mở bằng Excel)</button><button class="smallbtn red" id="xClear">Xoá toàn bộ nhật ký</button></div>'
+    + '<p class="note">Mọi dữ liệu chỉ lưu trong trình duyệt của máy này. Xoá dữ liệu trình duyệt sẽ mất nhật ký — nên tải về định kỳ để gửi chuyên viên.</p>';
+  const upd = () => {
+    S.name = $('sName').value.trim() || 'con'; S.partner = $('sPartner').value.trim() || 'Mẹ';
+    S.micMode = $('sMic').value; S.sens = $('sSens').value; S.waitSec = +$('sWait').value; S.trials = +$('sTrials').value;
+    S.muonLv = +$('sMuon').value; S.nhinLv = +$('sNhin').value; S.calm = $('sCalm').checked; saveS();
+  };
+  ['sName','sPartner','sMic','sSens','sWait','sTrials','sMuon','sNhin','sCalm'].forEach(id => $(id).onchange = upd);
+  $('sSched').querySelectorAll('input').forEach(c => c.onchange = () => {
+    if(c.checked){ if(S.schedule.length >= 4){ c.checked = false; toast('Tối đa 4 trò mỗi ngày.'); return; } S.schedule.push(c.value); }
+    else S.schedule = S.schedule.filter(x => x !== c.value);
+    saveS(); toast('Lịch: ' + S.schedule.map(id => gameById(id).name).join(' → '));
+  });
+  $('tVoice').onclick = () => { ensureCtx(); speakP('Chào ' + S.name + '! Mình là bạn Cú.'); };
+  $('tMic').onclick = async () => {
+    const ok = await micInit(); const info = $('micInfo');
+    if(!ok){ info.textContent = '❌ Không mở được micro. Kiểm tra quyền micro của trình duyệt (trang phải chạy bằng https).'; return; }
+    info.textContent = 'Con nói thử… (5 giây)'; const t0 = performance.now(); let peak = 0;
+    const lp = () => { const x = micLevel() / micThr(); peak = Math.max(peak, x); info.textContent = '🎤 ' + '▮'.repeat(Math.min(20, Math.round(x * 5))) + (x > 1 ? '  ← nghe thấy!' : ''); if(performance.now() - t0 < 5000) requestAnimationFrame(lp); else info.textContent = peak > 1 ? '✅ Micro nghe tốt.' : '⚠️ Chưa nghe rõ — thử độ nhạy “Cao”.'; };
+    lp();
+  };
+  const dl = (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
+  $('xJson').onclick = () => dl('nhat-ky-' + dkey(Date.now()) + '.json', JSON.stringify({ settings:S, log:LOG }, null, 1), 'application/json');
+  $('xCsv').onclick = () => {
+    const rows = [['ngay','gio','tro_choi','ky_nang','muc_tieu','phan_hoi','muc_goi_y','dat','thoi_gian_cho_ms','do_dai_tieng_noi_ms']];
+    LOG.sessions.forEach(s => s.tr.forEach(t => rows.push([dkey(t.at), hhmm(t.at), (gameById(s.g) || {}).name || s.g, SKILL[t.k] || t.k, t.tgt || '', t.r, t.p || 0, t.ok ? 1 : 0, t.ms || '', t.v || ''])));
+    dl('luot-choi-' + dkey(Date.now()) + '.csv', '﻿' + rows.map(r => r.map(x => '"' + String(x).replace(/"/g, '""') + '"').join(',')).join('\n'), 'text/csv');
+  };
+  let armed = false;
+  $('xClear').onclick = function(){ if(!armed){ armed = true; this.textContent = 'Bấm lần nữa để xoá hẳn'; return; } LOG = { v:1, sessions:[], feel:[], notes:{} }; saveLog(); toast('Đã xoá nhật ký.'); renderParent(); };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   11. KHỞI ĐỘNG
+   ═══════════════════════════════════════════════════════════════════════ */
+function unlockAudio(){ ensureCtx(); if(audioCtx){ try{ audioCtx.resume(); }catch(e){} } }
+document.addEventListener('pointerdown', unlockAudio, { once:true });
+document.addEventListener('keydown', unlockAudio, { once:true });
+document.addEventListener('visibilitychange', () => { if(document.hidden && G){ stopAll(); finishGame(true); } }); // rời ứng dụng → dừng nhẹ nhàng, không chạy ngầm (không tính là con xin nghỉ)
+saveS(); setSoundLabel(); goHome();
+// móc kiểm thử tự động (không ảnh hưởng khi chơi thật)
+window.__k4 = { fast:() => { FAST = true; }, cur:() => CUR, auto:() => { if(!CUR) return false; if(CUR.o.auto) CUR.o.auto(); else answer(CUR.o.voice ? 'parent' : 'tap'); return true; }, log:() => LOG };
+</script>
+</body>
+</html>
